@@ -6,48 +6,7 @@
  */
 
 #include "hilevel.h"
-
-pcb_t pcb[ 5 ]; int executing = 0;
-
-void scheduler( ctx_t* ctx ) {
-  if     ( 0 == executing ) {
-    memcpy( &pcb[ 0 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_1
-    pcb[ 0 ].status = STATUS_READY;                // update   P_1 status
-    memcpy( ctx, &pcb[ 1 ].ctx, sizeof( ctx_t ) ); // restore  P_2
-    pcb[ 1 ].status = STATUS_EXECUTING;            // update   P_2 status
-    executing = 1;                                 // update   index => P_2
-  }
-  else if( 1 == executing ) {
-    memcpy( &pcb[ 1 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_2
-    pcb[ 1 ].status = STATUS_READY;                // update   P_2 status
-    memcpy( ctx, &pcb[ 2 ].ctx, sizeof( ctx_t ) ); // restore  P_1
-    pcb[ 2 ].status = STATUS_EXECUTING;            // update   P_1 status
-    executing = 2;                                 // update   index => P_1
-  }
-  else if( 2 == executing ) {
-    memcpy( &pcb[ 2 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_3
-    pcb[ 2 ].status = STATUS_READY;                // update   P_3 status
-    memcpy( ctx, &pcb[ 3 ].ctx, sizeof( ctx_t ) ); // restore  P_1
-    pcb[ 3 ].status = STATUS_EXECUTING;            // update   P_1 status
-    executing = 3;                                 // update   index => P_1
-  }
-  else if( 3 == executing ) {
-    memcpy( &pcb[ 3 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_2
-    pcb[ 3 ].status = STATUS_READY;                // update   P_2 status
-    memcpy( ctx, &pcb[ 4 ].ctx, sizeof( ctx_t ) ); // restore  P_1
-    pcb[ 4 ].status = STATUS_EXECUTING;            // update   P_1 status
-    executing = 4;                                 // update   index => P_1
-  }
-  else if( 4 == executing ) {
-    memcpy( &pcb[ 4 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_3
-    pcb[ 4 ].status = STATUS_READY;                // update   P_3 status
-    memcpy( ctx, &pcb[ 0 ].ctx, sizeof( ctx_t ) ); // restore  P_1
-    pcb[ 0 ].status = STATUS_EXECUTING;            // update   P_1 status
-    executing = 0;                                 // update   index => P_1
-  }
-
-  return;
-}
+#define PROGRAMS 5
 
 extern void     main_P1();
 extern uint32_t tos_P1;
@@ -60,6 +19,26 @@ extern uint32_t tos_P4;
 extern void     main_P5();
 extern uint32_t tos_P5;
 
+void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
+uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5 };
+
+pcb_t pcb[ PROGRAMS ]; int executing = 0;
+
+void scheduler( ctx_t* ctx ) {
+    bool switched = false;
+    for (int  i = 0; (i < PROGRAMS) && !switched ; i++ )  {
+        if     ( i == executing ) {
+          memcpy( &pcb[ i ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_1
+          pcb[ i ].status = STATUS_READY;                // update   P_1 status
+          memcpy( ctx, &pcb[ (i+1)%PROGRAMS ].ctx, sizeof( ctx_t ) ); // restore  P_2
+          pcb[ (i+1)%PROGRAMS ].status = STATUS_EXECUTING;            // update   P_2 status
+          executing = (i+1)%PROGRAMS;
+          switched = true;                               // update   index => P_2
+        }
+    }
+
+  return;
+}
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
   /* Initialise PCBs representing processes stemming from execution of
@@ -70,63 +49,36 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    * - the PC and SP values matche the entry point and top of stack.
    */
 
-  memset( &pcb[ 0 ], 0, sizeof( pcb_t ) );
-  pcb[ 0 ].pid      = 1;
-  pcb[ 0 ].status   = STATUS_READY;
-  pcb[ 0 ].ctx.cpsr = 0x50;
-  pcb[ 0 ].ctx.pc   = ( uint32_t )( &main_P1 );
-  pcb[ 0 ].ctx.sp   = ( uint32_t )( &tos_P1  );
+   for(int i = 0; i < PROGRAMS; i++)  {
+       memset( &pcb[ i ], 0, sizeof( pcb_t ) );
+       pcb[ i ].pid      = i+1;
+       pcb[ i ].status   = STATUS_READY;
+       pcb[ i ].ctx.cpsr = 0x50;
+       pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
+       pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
+   }
+    /* Once the PCBs are initialised, we (arbitrarily) select one to be
+    * restored (i.e., executed) when the function then returns.
+    */
 
-  memset( &pcb[ 1 ], 0, sizeof( pcb_t ) );
-  pcb[ 1 ].pid      = 2;
-  pcb[ 1 ].status   = STATUS_READY;
-  pcb[ 1 ].ctx.cpsr = 0x50;
-  pcb[ 1 ].ctx.pc   = ( uint32_t )( &main_P2 );
-  pcb[ 1 ].ctx.sp   = ( uint32_t )( &tos_P2  );
+    memcpy( ctx, &pcb[ 0 ].ctx, sizeof( ctx_t ) );
+    pcb[ 0 ].status = STATUS_EXECUTING;
+    executing = 0;
 
-  memset( &pcb[ 2 ], 0, sizeof( pcb_t ) );
-  pcb[ 2 ].pid      = 3;
-  pcb[ 2 ].status   = STATUS_READY;
-  pcb[ 2 ].ctx.cpsr = 0x50;
-  pcb[ 2 ].ctx.pc   = ( uint32_t )( &main_P3);
-  pcb[ 2 ].ctx.sp   = ( uint32_t )( &tos_P3 );
+    TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
+    TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer
+    TIMER0->Timer1Ctrl |= 0x00000040; // select periodic timer
+    TIMER0->Timer1Ctrl |= 0x00000020; // enable          timer interrupt
+    TIMER0->Timer1Ctrl |= 0x00000080; // enable          timer
 
-  memset( &pcb[ 3 ], 0, sizeof( pcb_t ) );
-  pcb[ 3 ].pid      = 4;
-  pcb[ 3 ].status   = STATUS_READY;
-  pcb[ 3 ].ctx.cpsr = 0x50;
-  pcb[ 3 ].ctx.pc   = ( uint32_t )( &main_P4);
-  pcb[ 3 ].ctx.sp   = ( uint32_t )( &tos_P4 );
+    GICC0->PMR          = 0x000000F0; // unmask all            interrupts
+    GICD0->ISENABLER1  |= 0x00000010; // enable timer          interrupt
+    GICC0->CTLR         = 0x00000001; // enable GIC interface
+    GICD0->CTLR         = 0x00000001; // enable GIC distributor
 
-  memset( &pcb[ 4 ], 0, sizeof( pcb_t ) );
-  pcb[ 4 ].pid      = 5;
-  pcb[ 4 ].status   = STATUS_READY;
-  pcb[ 4 ].ctx.cpsr = 0x50;
-  pcb[ 4 ].ctx.pc   = ( uint32_t )( &main_P5);
-  pcb[ 4 ].ctx.sp   = ( uint32_t )( &tos_P5 );
+    int_enable_irq();
 
-  /* Once the PCBs are initialised, we (arbitrarily) select one to be
-   * restored (i.e., executed) when the function then returns.
-   */
-
-  memcpy( ctx, &pcb[ 0 ].ctx, sizeof( ctx_t ) );
-  pcb[ 0 ].status = STATUS_EXECUTING;
-  executing = 0;
-
-  TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
-  TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer
-  TIMER0->Timer1Ctrl |= 0x00000040; // select periodic timer
-  TIMER0->Timer1Ctrl |= 0x00000020; // enable          timer interrupt
-  TIMER0->Timer1Ctrl |= 0x00000080; // enable          timer
-
-  GICC0->PMR          = 0x000000F0; // unmask all            interrupts
-  GICD0->ISENABLER1  |= 0x00000010; // enable timer          interrupt
-  GICC0->CTLR         = 0x00000001; // enable GIC interface
-  GICD0->CTLR         = 0x00000001; // enable GIC distributor
-
-  int_enable_irq();
-
-  return;
+    return;
 }
 
 void hilevel_handler_irq( ctx_t* ctx) {

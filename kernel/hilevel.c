@@ -20,24 +20,31 @@ extern void     main_P5();
 extern uint32_t tos_P5;
 
 void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
-uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5 };
+uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
 pcb_t pcb[ PROGRAMS ]; int executing = 0;
 
 void scheduler( ctx_t* ctx ) {
     bool switched = false;
-    for (int  i = 0; (i < PROGRAMS) && !switched ; i++ )  {
-        if     ( i == executing ) {
-          memcpy( &pcb[ i ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_1
-          pcb[ i ].status = STATUS_READY;                // update   P_1 status
-          memcpy( ctx, &pcb[ (i+1)%PROGRAMS ].ctx, sizeof( ctx_t ) ); // restore  P_2
-          pcb[ (i+1)%PROGRAMS ].status = STATUS_EXECUTING;            // update   P_2 status
-          executing = (i+1)%PROGRAMS;
-          switched = true;                               // update   index => P_2
+    memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_i
+    if(pcb[executing].status != STATUS_TERMINATED)
+        pcb[ executing ].status = STATUS_READY;                // update   P_i status
+    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {
+        if (pcb[i%PROGRAMS].status == STATUS_READY)  {
+            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) ); // restore  next P
+            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;             // update   P status
+            executing = i % PROGRAMS;                                   // update   index => P_2
+            switched = true;
+        }
+    }
+    if (!switched)  {
+        char* s = "\nAll programs finished.";
+        for ( int i = 0; i < 22; i++)  {
+            PL011_putc( UART0, s[i], true);
         }
     }
 
-  return;
+    return;
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
@@ -116,6 +123,15 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
       ctx->gpr[ 0 ] = n;
       break;
+    }
+    case 0x04: { //0x04 => exit(x)
+        pcb[executing].status = STATUS_TERMINATED;
+        char* s = "\nProgram finished.";
+        for ( int i = 0; i < 18; i++)  {
+            PL011_putc( UART0, s[i], true);
+        }
+        scheduler(ctx);
+        break;
     }
 
     default   : { // 0x?? => unknown/unsupported

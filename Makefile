@@ -55,3 +55,6 @@ kill-gdb    :
 
 clean       :
 	@rm -f core ${PROJECT_OBJECTS} ${PROJECT_TARGETS}
+
+include Makefile.console
+include Makefile.disk

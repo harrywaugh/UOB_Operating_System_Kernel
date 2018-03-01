@@ -7,16 +7,7 @@
 
 #include "hilevel.h"
 
-/* Since we *know* there will be 2 processes, stemming from the 2 user
- * programs, we can
- *
- * - allocate a fixed-size process table (of PCBs), and then maintain
- *   an index into it for the currently executing process,
- * - employ a fixed-case of round-robin scheduling: no more processes
- *   can be created, and neither is able to terminate.
- */
-
-pcb_t pcb[ 3 ]; int executing = 0;
+pcb_t pcb[ 5 ]; int executing = 0;
 
 void scheduler( ctx_t* ctx ) {
   if     ( 0 == executing ) {
@@ -36,6 +27,20 @@ void scheduler( ctx_t* ctx ) {
   else if( 2 == executing ) {
     memcpy( &pcb[ 2 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_3
     pcb[ 2 ].status = STATUS_READY;                // update   P_3 status
+    memcpy( ctx, &pcb[ 3 ].ctx, sizeof( ctx_t ) ); // restore  P_1
+    pcb[ 3 ].status = STATUS_EXECUTING;            // update   P_1 status
+    executing = 3;                                 // update   index => P_1
+  }
+  else if( 3 == executing ) {
+    memcpy( &pcb[ 3 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_2
+    pcb[ 3 ].status = STATUS_READY;                // update   P_2 status
+    memcpy( ctx, &pcb[ 4 ].ctx, sizeof( ctx_t ) ); // restore  P_1
+    pcb[ 4 ].status = STATUS_EXECUTING;            // update   P_1 status
+    executing = 4;                                 // update   index => P_1
+  }
+  else if( 4 == executing ) {
+    memcpy( &pcb[ 4 ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_3
+    pcb[ 4 ].status = STATUS_READY;                // update   P_3 status
     memcpy( ctx, &pcb[ 0 ].ctx, sizeof( ctx_t ) ); // restore  P_1
     pcb[ 0 ].status = STATUS_EXECUTING;            // update   P_1 status
     executing = 0;                                 // update   index => P_1
@@ -50,6 +55,11 @@ extern void     main_P2();
 extern uint32_t tos_P2;
 extern void     main_P3();
 extern uint32_t tos_P3;
+extern void     main_P4();
+extern uint32_t tos_P4;
+extern void     main_P5();
+extern uint32_t tos_P5;
+
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
   /* Initialise PCBs representing processes stemming from execution of
@@ -81,6 +91,20 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
   pcb[ 2 ].ctx.pc   = ( uint32_t )( &main_P3);
   pcb[ 2 ].ctx.sp   = ( uint32_t )( &tos_P3 );
 
+  memset( &pcb[ 3 ], 0, sizeof( pcb_t ) );
+  pcb[ 3 ].pid      = 4;
+  pcb[ 3 ].status   = STATUS_READY;
+  pcb[ 3 ].ctx.cpsr = 0x50;
+  pcb[ 3 ].ctx.pc   = ( uint32_t )( &main_P4);
+  pcb[ 3 ].ctx.sp   = ( uint32_t )( &tos_P4 );
+
+  memset( &pcb[ 4 ], 0, sizeof( pcb_t ) );
+  pcb[ 4 ].pid      = 5;
+  pcb[ 4 ].status   = STATUS_READY;
+  pcb[ 4 ].ctx.cpsr = 0x50;
+  pcb[ 4 ].ctx.pc   = ( uint32_t )( &main_P5);
+  pcb[ 4 ].ctx.sp   = ( uint32_t )( &tos_P5 );
+
   /* Once the PCBs are initialised, we (arbitrarily) select one to be
    * restored (i.e., executed) when the function then returns.
    */
@@ -103,6 +127,20 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
   int_enable_irq();
 
   return;
+}
+
+void hilevel_handler_irq( ctx_t* ctx) {
+
+  // Step 2: read  the interrupt identifier so we know the source.
+
+  uint32_t id = GICC0->IAR;
+
+  if( id == GIC_SOURCE_TIMER0 ) {
+    scheduler( ctx );
+    TIMER0->Timer1IntClr = 0x01;
+  }
+
+  GICC0->EOIR = id;
 }
 
 void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
@@ -134,19 +172,4 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
   }
 
   return;
-}
-
-
-void hilevel_handler_irq( ctx_t* ctx) {
-
-  // Step 2: read  the interrupt identifier so we know the source.
-
-  uint32_t id = GICC0->IAR;
-
-  if( id == GIC_SOURCE_TIMER0 ) {
-    scheduler( ctx );
-    TIMER0->Timer1IntClr = 0x01;
-  }
-
-  GICC0->EOIR = id;
 }

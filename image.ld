@@ -1,8 +1,8 @@
 /* Copyright (C) 2017 Daniel Page <csdsp@bristol.ac.uk>
  *
- * Use of this source code is restricted per the CC BY-NC-ND license, a
- * copy of which can be found via http://creativecommons.org and should
- * be included as LICENSE.txt within the associated archive.
+ * Use of this source code is restricted per the CC BY-NC-ND license, a copy of
+ * which can be found via http://creativecommons.org (and should be included as
+ * LICENSE.txt within the associated archive or repository).
  */
 
 SECTIONS {
@@ -31,4 +31,10 @@ SECTIONS {
   /* allocate stack for P3           */
   .       = . + 0x00001000;
   tos_P3  = .;
+  /* allocate stack for P4           */
+  .       = . + 0x00001000;
+  tos_P4  = .;
+  /* allocate stack for P5           */
+  .       = . + 0x00001000;
+  tos_P5  = .;
 }

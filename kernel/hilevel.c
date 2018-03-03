@@ -22,7 +22,13 @@ extern uint32_t tos_P5;
 void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
 uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
-pcb_t pcb[ PROGRAMS ]; int executing = 0;
+pcb_t pcb[ PROGRAMS ];
+int executing = 0;
+
+void put_str( char* str )  {
+    for (int i = 0; str[i] != '\0'; i++ )  PL011_putc( UART0, str[i], true);
+    return;
+}
 
 void scheduler( ctx_t* ctx ) {
     bool switched = false;
@@ -37,22 +43,8 @@ void scheduler( ctx_t* ctx ) {
             switched = true;
         }
     }
-    if (!switched)  {
-        char* s = "\nAll programs finished.";
-        for ( int i = 0; i < 22; i++)  {
-            PL011_putc( UART0, s[i], true);
-        }
-    }
-
+    if (!switched)  put_str("\nAll programs finished.\0");
     return;
-}
-
-void put_str( char* str )  {
-    for (int i = 0; str[i] != '\0'; i++ )  {
-        PL011_putc( UART0, str[i], true);
-    }
-    return;
-
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
@@ -64,7 +56,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    * - the PC and SP values matche the entry point and top of stack.
    */
 
-   for(int i = 0; i < PROGRAMS; i++)  {
+   for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
        pcb[ i ].pid      = i+1;
        pcb[ i ].status   = STATUS_READY;

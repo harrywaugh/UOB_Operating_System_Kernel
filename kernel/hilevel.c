@@ -4,7 +4,6 @@
  * which can be found via http://creativecommons.org (and should be included as
  * LICENSE.txt within the associated archive or repository).
  */
- #Master comment2
 
 #include "hilevel.h"
 #define PROGRAMS 5
@@ -46,6 +45,14 @@ void scheduler( ctx_t* ctx ) {
     }
 
     return;
+}
+
+void put_str( char* str )  {
+    for (int i = 0; str[i] != '\0'; i++ )  {
+        PL011_putc( UART0, str[i], true);
+    }
+    return;
+
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
@@ -127,10 +134,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
     }
     case 0x04: { //0x04 => exit(x)
         pcb[executing].status = STATUS_TERMINATED;
-        char* s = "\nProgram finished.";
-        for ( int i = 0; i < 18; i++)  {
-            PL011_putc( UART0, s[i], true);
-        }
+        put_str("\nProgram finished.\0");
         scheduler(ctx);
         break;
     }

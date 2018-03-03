@@ -51,13 +51,19 @@ typedef enum {
 } status_t;
 
 typedef struct {
+    int init;
+    int age;
+} priority_t;
+
+typedef struct {
   uint32_t cpsr, pc, gpr[ 13 ], sp, lr;
 } ctx_t;
 
 typedef struct {
-     pid_t    pid;
-  status_t status;
-     ctx_t    ctx;
+     pid_t             pid;
+     priority_t   priority;
+  status_t          status;
+     ctx_t             ctx;
 } pcb_t;
 
 #endif

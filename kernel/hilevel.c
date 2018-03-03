@@ -32,18 +32,20 @@ void put_str( char* str )  {
 
 void scheduler( ctx_t* ctx ) {
     bool switched = false;
-    memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) ); // preserve P_i
-    if(pcb[executing].status != STATUS_TERMINATED)
-        pcb[ executing ].status = STATUS_READY;                // update   P_i status
-    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {
-        if (pcb[i%PROGRAMS].status == STATUS_READY)  {
-            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) ); // restore  next P
-            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;             // update   P status
-            executing = i % PROGRAMS;                                   // update   index => P_2
+
+    memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
+    if(pcb[executing].status != STATUS_TERMINATED)  pcb[ executing ].status = STATUS_READY;          // update program status
+
+    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {              //Go through each program
+        if (pcb[i%PROGRAMS].status == STATUS_READY)  {                                               //Check if program is ready
+            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) );                              // Restore new current program
+            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;                                           // update current P status
+            pcb[ i % PROGRAMS ].priority.age = 0;
+            executing = i % PROGRAMS;                                                                // update current program index
             switched = true;
         }
     }
-    if (!switched)  put_str("\nAll programs finished.\0");
+    if (!switched)  put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
     return;
 }
 
@@ -59,6 +61,8 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
        pcb[ i ].pid      = i+1;
+       pcb[ i ].priority.init = i * 10;
+       pcb[ i ].priority.age = 0;
        pcb[ i ].status   = STATUS_READY;
        pcb[ i ].ctx.cpsr = 0x50;
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
@@ -92,14 +96,16 @@ void hilevel_handler_irq( ctx_t* ctx) {
 
   // Step 2: read  the interrupt identifier so we know the source.
 
-  uint32_t id = GICC0->IAR;
+    uint32_t id = GICC0->IAR;
 
-  if( id == GIC_SOURCE_TIMER0 ) {
-    scheduler( ctx );
-    TIMER0->Timer1IntClr = 0x01;
-  }
+    if( id == GIC_SOURCE_TIMER0 ) {
+        for (int i = executing + 1; i < PROGRAMS + executing; i++)
+            pcb[ i % PROGRAMS].priority.age++;  //increase all priority age except executing program
+        scheduler( ctx );
+        TIMER0->Timer1IntClr = 0x01;
+    }
 
-  GICC0->EOIR = id;
+    GICC0->EOIR = id;
 }
 
 void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {

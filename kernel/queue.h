@@ -2,18 +2,16 @@
 
 typedef struct {
     struct node_t* previous;
-    void*          item;
+    int          id;
 } node_t;
 
 typedef struct {
     node_t* tail;
     node_t* head;
-    int bytes;
-    int length;
 } queue_t;
 
-queue_t *newQueue ( int bytesize );
+queue_t *newQueue ();
 
-void push ( queue_t *queue, void *p );
-void peek ( queue_t *queue, void *p );
-void pop  ( queue_t *queue, void *p );
+void push ( queue_t *queue, int i);
+int peek ( queue_t *queue );
+int pop  ( queue_t *queue );

@@ -6,6 +6,7 @@
  */
 
 #include "hilevel.h"
+#include "queue.h"
 #define PROGRAMS 5
 
 extern void     main_P1();
@@ -24,6 +25,8 @@ uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_
 
 pcb_t pcb[ PROGRAMS ];
 int executing = 0;
+queue_t *queue_level1;
+pcb_t *curr_prog;
 
 void put_str( char* str )  {
     for (int i = 0; str[i] != '\0'; i++ )  PL011_putc( UART0, str[i], true);
@@ -34,19 +37,35 @@ void scheduler( ctx_t* ctx ) {
     bool switched = false;
 
     memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    if(pcb[executing].status != STATUS_TERMINATED)  pcb[ executing ].status = STATUS_READY;          // update program status
-
-    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {              //Go through each program
-        if (pcb[i%PROGRAMS].status == STATUS_READY)  {                                               //Check if program is ready
-            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) );                              // Restore new current program
-            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;                                           // update current P status
-            pcb[ i % PROGRAMS ].priority.age = 0;
-            executing = i % PROGRAMS;                                                                // update current program index
-            switched = true;
-        }
+    if( pcb[executing].status != STATUS_TERMINATED )  {
+        pcb[ executing ].status = STATUS_READY;                                                      // update program status
+        push(queue_level1, executing);
     }
-    if (!switched)  put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
+
+    executing = pop(queue_level1);
+    if (executing != -1 && pcb[executing].status == STATUS_READY)  {
+        memcpy( ctx, &pcb[ executing ].ctx, sizeof( ctx_t ) );
+        pcb[ executing ].status = STATUS_EXECUTING;                                           // update current P status
+        pcb[ executing ].priority.age = 0;
+    } else
+        put_str("\nAll programs finished.\0");
     return;
+
+    // memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
+    // if(curr_prog->status != STATUS_TERMINATED)  {
+    //     curr_prog->status = STATUS_READY;                                                     // update program status
+    //     push(queue_level1, curr_prog);
+    // } else
+    //     free(curr_prog);
+    //
+    // pop (queue_level1, curr_prog);
+    // if (curr_prog != NULL)  {
+    //     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
+    //     curr_prog->status = STATUS_EXECUTING;                                           // update current P status
+    //     curr_prog->priority.age = 0;
+    // } else {
+    //     put_str("\nAll programs finished.\0");
+    // }
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
@@ -57,6 +76,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    *   mode, with IRQ interrupts enabled, and
    * - the PC and SP values matche the entry point and top of stack.
    */
+   queue_level1 = newQueue(sizeof(pcb_t *));
 
    for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
@@ -67,14 +87,16 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
        pcb[ i ].ctx.cpsr = 0x50;
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
        pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
+       push(queue_level1, i);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.
     */
 
-    memcpy( ctx, &pcb[ 0 ].ctx, sizeof( ctx_t ) );
-    pcb[ 0 ].status = STATUS_EXECUTING;
-    executing = 0;
+    executing = pop(queue_level1);
+    memcpy( ctx, &pcb[ executing ].ctx, sizeof( ctx_t ) );
+    pcb[ executing ].status = STATUS_EXECUTING;
+
 
     TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
     TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer

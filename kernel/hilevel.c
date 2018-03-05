@@ -36,36 +36,19 @@ void put_str( char* str )  {
 void scheduler( ctx_t* ctx ) {
     bool switched = false;
 
-    memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    if(pcb[executing].status != STATUS_TERMINATED)  pcb[ executing ].status = STATUS_READY;          // update program status
-
-    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {              //Go through each program
-        if (pcb[i%PROGRAMS].status == STATUS_READY)  {                                               //Check if program is ready
-            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) );                              // Restore new current program
-            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;                                           // update current P status
-            pcb[ i % PROGRAMS ].priority.age = 0;
-            executing = i % PROGRAMS;                                                                // update current program index
-            switched = true;
-        }
+    memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
+    if(curr_prog->status != STATUS_TERMINATED){
+        curr_prog->status = STATUS_READY;                                                      // update program status
+        push(queue_level1, curr_prog);                                                         // Repush unfinished program to queue
     }
-    if (!switched)  put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
-    return;
 
-    // memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    // if(curr_prog->status != STATUS_TERMINATED)  {
-    //     curr_prog->status = STATUS_READY;                                                     // update program status
-    //     push(queue_level1, curr_prog);
-    // } else
-    //     free(curr_prog);
-    //
-    // pop (queue_level1, curr_prog);
-    // if (curr_prog != NULL)  {
-    //     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
-    //     curr_prog->status = STATUS_EXECUTING;                                           // update current P status
-    //     curr_prog->priority.age = 0;
-    // } else {
-    //     put_str("\nAll programs finished.\0");
-    // }
+    pop (queue_level1, curr_prog);
+    if (curr_prog != NULL && curr_prog->status == STATUS_READY)  {                                               //Check if program is ready
+        memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
+        curr_prog->status = STATUS_EXECUTING;                                           // update current P status
+        curr_prog->priority.age = 0;
+    } else put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
+    return;
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
@@ -94,10 +77,8 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     */
     curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
     pop(queue_level1, curr_prog);
-
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
-    pcb[ 0 ].status = STATUS_EXECUTING;
-    executing = 0;
+    curr_prog->status = STATUS_EXECUTING;
 
 
 
@@ -129,8 +110,8 @@ void hilevel_handler_irq( ctx_t* ctx) {
     uint32_t id = GICC0->IAR;
 
     if( id == GIC_SOURCE_TIMER0 ) {
-        for (int i = executing + 1; i < PROGRAMS + executing; i++)
-            pcb[ i % PROGRAMS].priority.age++;  //increase all priority age except executing program
+        // for (int i = executing + 1; i < PROGRAMS + executing; i++)
+        //     pcb[ i % PROGRAMS].priority.age++;  //increase all priority age except executing program
         scheduler( ctx );
         TIMER0->Timer1IntClr = 0x01;
     }
@@ -161,7 +142,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
       break;
     }
     case 0x04: { //0x04 => exit(x)
-        pcb[executing].status = STATUS_TERMINATED;
+        curr_prog->status = STATUS_TERMINATED;
         put_str("\nProgram finished.\0");
         scheduler(ctx);
         break;

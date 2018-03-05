@@ -50,10 +50,7 @@ typedef enum {
   STATUS_TERMINATED
 } status_t;
 
-typedef struct {
-    int init;
-    int age;
-} priority_t;
+typedef int priority_t;
 
 typedef struct {
   uint32_t cpsr, pc, gpr[ 13 ], sp, lr;

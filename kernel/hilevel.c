@@ -43,11 +43,10 @@ void scheduler( ctx_t* ctx ) {
     }
 
     pop (queue_level1, curr_prog);
-    if (curr_prog != NULL && curr_prog->status == STATUS_READY)  {                                               //Check if program is ready
+    if (curr_prog != NULL && curr_prog->status == STATUS_READY)  {                    //Check if program is ready
         memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
-        curr_prog->status = STATUS_EXECUTING;                                           // update current P status
-        curr_prog->priority.age = 0;
-    } else put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
+        curr_prog->status = STATUS_EXECUTING;
+    } else put_str("\nAll programs finished.\0");                                     // If program wasn't switched, they're all done
     return;
 }
 
@@ -64,8 +63,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
        pcb[ i ].pid      = i+1;
-       pcb[ i ].priority.init = i * 10;
-       pcb[ i ].priority.age = 0;
+       pcb[ i ].priority = i * 10;
        pcb[ i ].status   = STATUS_READY;
        pcb[ i ].ctx.cpsr = 0x50;
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );

@@ -19,12 +19,23 @@ void push ( queue_t *queue, pcb_t *pcb )  {
     memcpy(newNode->pcb, pcb, sizeof(pcb_t));
     newNode->previous    = NULL;
 
-    if (queue->tail == NULL)  {                                      //Set pointers to new node
+    if (queue->head == NULL)  {                                     //If queue is empty: Add the node
         queue->head = newNode;
+        queue->tail = newNode;
     } else {
-        queue->tail->previous = newNode;
+        node_t *currentNode = queue->head;
+        if (currentNode->pcb->priority < pcb->priority)  {         //If new pcb is higher priority, then add to front
+            newNode->previous = currentNode;
+            queue->head = newNode;
+        }
+        while ((currentNode->previous != NULL) && (&(&(currentNode->previous)->pcb)->priority >= pcb->priority))  { //Cycle back to find slot in point
+            currentNode = currentNode->previous;
+        }
+        if (currentNode->previous == NULL)  queue->tail = newNode;                  //If new pcb has least priority, add to back
+        else                                newNode->previous = currentNode->previous;    //Else slot it in a gap.
+        currentNode->previous = newNode;
+
     }
-    queue->tail = newNode;
 
     return;
 }

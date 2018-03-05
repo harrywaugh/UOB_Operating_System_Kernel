@@ -24,7 +24,6 @@ extern uint32_t tos_P5;
 void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
 uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
-pcb_t pcb[ PROGRAMS ];
 queue_t *queues[QUEUENO];
 pcb_t *curr_prog;
 
@@ -81,15 +80,16 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
 
 
    for ( int i = 0; i < PROGRAMS; i++ )  {
-       memset( &pcb[ i ], 0, sizeof( pcb_t ) );
-       pcb[ i ].pid      = i+1;
-       pcb[ i ].priority = i * 10;
-       pcb[ i ].status   = STATUS_READY;
-       pcb[ i ].ctx.cpsr = 0x50;
-       pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
-       pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
-       pcb[ i ].queue    = 0;
-       prioritypush(queues[ 0 ], &pcb[ i ]);
+       pcb_t *pcb = (pcb_t *)malloc(sizeof(pcb_t));
+       memset( pcb, 0, sizeof( pcb_t ) );
+       pcb->pid      = i+1;
+       pcb->priority = i * 10;
+       pcb->status   = STATUS_READY;
+       pcb->ctx.cpsr = 0x50;
+       pcb->ctx.sp   = ( uint32_t )( p_stacks[i] );
+       pcb->ctx.pc   = ( uint32_t )( p_mains[i]  );
+       pcb->queue    = 0;
+       prioritypush(queues[ 0 ], pcb);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.

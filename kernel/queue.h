@@ -1,8 +1,10 @@
 #include <stdlib.h>
+#include "hilevel.h"
+
 
 typedef struct {
     struct node_t* previous;
-    int          id;
+    pcb_t          *pcb;
 } node_t;
 
 typedef struct {
@@ -12,6 +14,6 @@ typedef struct {
 
 queue_t *newQueue ();
 
-void push ( queue_t *queue, int i);
-int peek ( queue_t *queue );
-int pop  ( queue_t *queue );
+void push ( queue_t *queue, pcb_t *pcb );
+void peek ( queue_t *queue, pcb_t *pcb );
+void pop  ( queue_t *queue, pcb_t *pcb );

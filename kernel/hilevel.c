@@ -37,18 +37,18 @@ void scheduler( ctx_t* ctx ) {
     bool switched = false;
 
     memcpy( &pcb[ executing ].ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    if( pcb[executing].status != STATUS_TERMINATED )  {
-        pcb[ executing ].status = STATUS_READY;                                                      // update program status
-        push(queue_level1, executing);
-    }
+    if(pcb[executing].status != STATUS_TERMINATED)  pcb[ executing ].status = STATUS_READY;          // update program status
 
-    executing = pop(queue_level1);
-    if (executing != -1 && pcb[executing].status == STATUS_READY)  {
-        memcpy( ctx, &pcb[ executing ].ctx, sizeof( ctx_t ) );
-        pcb[ executing ].status = STATUS_EXECUTING;                                           // update current P status
-        pcb[ executing ].priority.age = 0;
-    } else
-        put_str("\nAll programs finished.\0");
+    for (int  i = executing + 1; (i < PROGRAMS + executing + 1) && !switched ; i++ )  {              //Go through each program
+        if (pcb[i%PROGRAMS].status == STATUS_READY)  {                                               //Check if program is ready
+            memcpy( ctx, &pcb[ (i % PROGRAMS) ].ctx, sizeof( ctx_t ) );                              // Restore new current program
+            pcb[ i % PROGRAMS ].status = STATUS_EXECUTING;                                           // update current P status
+            pcb[ i % PROGRAMS ].priority.age = 0;
+            executing = i % PROGRAMS;                                                                // update current program index
+            switched = true;
+        }
+    }
+    if (!switched)  put_str("\nAll programs finished.\0");                                           // If program wasn't switched, they're all done
     return;
 
     // memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
@@ -76,7 +76,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    *   mode, with IRQ interrupts enabled, and
    * - the PC and SP values matche the entry point and top of stack.
    */
-   queue_level1 = newQueue(sizeof(pcb_t *));
+   queue_level1 = newQueue();
 
    for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
@@ -87,16 +87,24 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
        pcb[ i ].ctx.cpsr = 0x50;
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
        pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
-       push(queue_level1, i);
+       push(queue_level1, &pcb[ i ]);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.
     */
+    curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
+    pop(queue_level1, curr_prog);
 
-    executing = pop(queue_level1);
-    memcpy( ctx, &pcb[ executing ].ctx, sizeof( ctx_t ) );
-    pcb[ executing ].status = STATUS_EXECUTING;
+    memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
+    pcb[ 0 ].status = STATUS_EXECUTING;
+    executing = 0;
 
+
+
+    // pop (queue_level1, curr_prog);
+    // memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
+    // curr_prog->status = STATUS_EXECUTING;
+    // executing = 0;
 
     TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
     TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer

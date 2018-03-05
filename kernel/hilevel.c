@@ -40,9 +40,15 @@ int min (int a, int b)  {
 void scheduler( ctx_t* ctx ) {
 
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
+    if (curr_prog->queue = 2)
     if (curr_prog->status != STATUS_TERMINATED){
         curr_prog->status = STATUS_READY;                                                      // update program status
-        push(queues[min(QUEUENO-1, ++curr_prog->queue)], curr_prog);                                                         // Repush unfinished program to queue
+        int newQueue = min(QUEUENO-1, ++curr_prog->queue);
+        if(newQueue == 3) {
+            push(queues[newQueue], curr_prog);
+        } else {
+            prioritypush(queues[newQueue], curr_prog);
+        }
     }
     int i = 0;
     while ( i < QUEUENO && isEmpty(queues[ i++ ]));
@@ -78,7 +84,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
        pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
        pcb[ i ].queue    = 0;
-       push(queues[ 0 ], &pcb[ i ]);
+       prioritypush(queues[ 0 ], &pcb[ i ]);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.

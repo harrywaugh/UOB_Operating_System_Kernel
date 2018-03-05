@@ -19,6 +19,23 @@ void push ( queue_t *queue, pcb_t *pcb )  {
     memcpy(newNode->pcb, pcb, sizeof(pcb_t));
     newNode->previous    = NULL;
 
+    if (queue->tail == NULL)  {                                      //Set pointers to new node
+        queue->head = newNode;
+    } else {
+        queue->tail->previous = newNode;
+    }
+    queue->tail = newNode;
+
+    return;
+}
+
+void prioritypush ( queue_t *queue, pcb_t *pcb )  {
+
+    node_t *newNode       = (node_t *)malloc(sizeof(node_t));       //Create new node
+    newNode->pcb          = (pcb_t *)malloc(sizeof(pcb_t));
+    memcpy(newNode->pcb, pcb, sizeof(pcb_t));
+    newNode->previous    = NULL;
+
     if (queue->head == NULL)  {                                     //If queue is empty: Add the node
         queue->head = newNode;
         queue->tail = newNode;

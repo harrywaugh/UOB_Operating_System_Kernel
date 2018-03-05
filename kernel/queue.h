@@ -17,5 +17,6 @@ queue_t *newQueue ();
 
 bool isEmpty ( queue_t *queue );
 void push ( queue_t *queue, pcb_t *pcb );
+void prioritypush ( queue_t *queue, pcb_t *pcb );
 void peek ( queue_t *queue, pcb_t *pcb );
 void pop  ( queue_t *queue, pcb_t *pcb );

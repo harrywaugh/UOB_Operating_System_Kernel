@@ -37,10 +37,16 @@ int min (int a, int b)  {
     return (a < b) ? a : b;
 }
 
+int activeQueue()  {
+    int i = 0;
+    while ( i < QUEUENO && isEmpty(queues[ i++ ]));
+
+    return i-1;
+}
+
 void scheduler( ctx_t* ctx ) {
 
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    if (curr_prog->queue = 2)
     if (curr_prog->status != STATUS_TERMINATED){
         curr_prog->status = STATUS_READY;                                                      // update program status
         int newQueue = min(QUEUENO-1, ++curr_prog->queue);
@@ -50,15 +56,14 @@ void scheduler( ctx_t* ctx ) {
             prioritypush(queues[newQueue], curr_prog);
         }
     }
-    int i = 0;
-    while ( i < QUEUENO && isEmpty(queues[ i++ ]));
-    pop (queues[i-1], curr_prog);
+
+    pop (queues[activeQueue()], curr_prog);
+    TIMER0->Timer1Load = 1048576*(1 << activeQueue());
 
     if (curr_prog->status == STATUS_READY)  {                                         //Check if program is ready
         memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
         curr_prog->status = STATUS_EXECUTING;
-    }
-    if (curr_prog == NULL) put_str("\nAll programs finished.\0");                                     // If program wasn't switched, they're all done
+    }                                 // If program wasn't switched, they're all done
     return;
 }
 
@@ -90,16 +95,10 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     * restored (i.e., executed) when the function then returns.
     */
     curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
-    pop(queues[ 0 ], curr_prog);
+    pop(queues[ activeQueue() ], curr_prog);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 
-
-
-    // pop (queue_level1, curr_prog);
-    // memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
-    // curr_prog->status = STATUS_EXECUTING;
-    // executing = 0;
 
     TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
     TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer
@@ -157,7 +156,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
     }
     case 0x04: { //0x04 => exit(x)
         curr_prog->status = STATUS_TERMINATED;
-        put_str("\nProgram finished.\0");
+        put_str("\nProgram finished.\n\0");
         scheduler(ctx);
         break;
     }

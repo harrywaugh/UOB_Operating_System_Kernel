@@ -2,10 +2,11 @@
 #include "hilevel.h"
 
 
-typedef struct {
+struct node_t {
     struct node_t* previous;
-    pcb_t          *pcb;
-} node_t;
+    pcb_t *pcb;
+};
+typedef struct node_t node_t;
 
 typedef struct {
     node_t* tail;

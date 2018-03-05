@@ -61,6 +61,7 @@ typedef struct {
      priority_t   priority;
   status_t          status;
      ctx_t             ctx;
+     int             queue;
 } pcb_t;
 
 #endif

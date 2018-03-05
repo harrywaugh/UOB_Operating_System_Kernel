@@ -8,6 +8,7 @@
 #include "hilevel.h"
 #include "queue.h"
 #define PROGRAMS 5
+#define QUEUENO 4
 
 extern void     main_P1();
 extern uint32_t tos_P1;
@@ -24,8 +25,7 @@ void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main
 uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
 pcb_t pcb[ PROGRAMS ];
-int executing = 0;
-queue_t *queue_level1;
+queue_t *queues[QUEUENO];
 pcb_t *curr_prog;
 
 void put_str( char* str )  {
@@ -33,20 +33,26 @@ void put_str( char* str )  {
     return;
 }
 
+int min (int a, int b)  {
+    return (a < b) ? a : b;
+}
+
 void scheduler( ctx_t* ctx ) {
-    bool switched = false;
 
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    if(curr_prog->status != STATUS_TERMINATED){
+    if (curr_prog->status != STATUS_TERMINATED){
         curr_prog->status = STATUS_READY;                                                      // update program status
-        push(queue_level1, curr_prog);                                                         // Repush unfinished program to queue
+        push(queues[min(QUEUENO-1, ++curr_prog->queue)], curr_prog);                                                         // Repush unfinished program to queue
     }
+    int i = 0;
+    while ( i < QUEUENO && isEmpty(queues[ i++ ]));
+    pop (queues[i-1], curr_prog);
 
-    pop (queue_level1, curr_prog);
-    if (curr_prog != NULL && curr_prog->status == STATUS_READY)  {                    //Check if program is ready
+    if (curr_prog->status == STATUS_READY)  {                                         //Check if program is ready
         memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
         curr_prog->status = STATUS_EXECUTING;
-    } else put_str("\nAll programs finished.\0");                                     // If program wasn't switched, they're all done
+    }
+    if (curr_prog == NULL) put_str("\nAll programs finished.\0");                                     // If program wasn't switched, they're all done
     return;
 }
 
@@ -58,7 +64,10 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
    *   mode, with IRQ interrupts enabled, and
    * - the PC and SP values matche the entry point and top of stack.
    */
-   queue_level1 = newQueue();
+   for ( int i = 0; i < QUEUENO; i++ )  {
+       queues[ i ] = newQueue();
+   }
+
 
    for ( int i = 0; i < PROGRAMS; i++ )  {
        memset( &pcb[ i ], 0, sizeof( pcb_t ) );
@@ -68,13 +77,14 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
        pcb[ i ].ctx.cpsr = 0x50;
        pcb[ i ].ctx.sp   = ( uint32_t )( p_stacks[i] );
        pcb[ i ].ctx.pc   = ( uint32_t )( p_mains[i]  );
-       push(queue_level1, &pcb[ i ]);
+       pcb[ i ].queue    = 0;
+       push(queues[ 0 ], &pcb[ i ]);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.
     */
     curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
-    pop(queue_level1, curr_prog);
+    pop(queues[ 0 ], curr_prog);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 

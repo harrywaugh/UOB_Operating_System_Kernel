@@ -53,3 +53,8 @@ void pop ( queue_t *queue, pcb_t *pcb )  {
         free(oldHeadNode);
     }
 }
+
+bool isEmpty( queue_t *queue )  {
+    if ( queue->head == NULL)  return true;
+    return false;
+}

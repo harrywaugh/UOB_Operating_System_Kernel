@@ -41,7 +41,7 @@ extern void main_P4();
 extern void main_P5();
 
 void* load( char* x ) {
-    if     ( 0 == strcmp( x, "P2" ) ) {
+    if     ( 0 == strcmp( x, "P1" ) ) {
       return &main_P1;
     }
     if     ( 0 == strcmp( x, "P2" ) ) {

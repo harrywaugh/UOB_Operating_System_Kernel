@@ -9,21 +9,18 @@
 #include "queue.h"
 #define PROGRAMS 5
 #define QUEUENO 4
+int curr_pid = 1;
+int curr_stack = 0;
 
 extern void      main_console();
 extern uint32_t  tos_console;
-extern void      main_P1();
 extern uint32_t  tos_P1;
-extern void      main_P2();
 extern uint32_t  tos_P2;
-extern void      main_P3();
 extern uint32_t  tos_P3;
-extern void      main_P4();
 extern uint32_t  tos_P4;
-extern void      main_P5();
 extern uint32_t  tos_P5;
 
-void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
+//void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
 uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
 uint32_t *console_stack = &tos_console;
@@ -31,10 +28,10 @@ uint32_t *console_stack = &tos_console;
 queue_t *queue;
 pcb_t *curr_prog;
 
-pcb_t *create_process(uint32_t *stackp, void *main_fn)  {
+pcb_t *create_process(int id, uint32_t *stackp, void *main_fn)  {
     pcb_t *pcb = (pcb_t *)malloc(sizeof(pcb_t));
     memset( pcb, 0, sizeof( pcb_t ) );
-    pcb->pid      = 0;
+    pcb->pid      = id;
     pcb->priority = 0;
     pcb->status   = STATUS_READY;
     pcb->ctx.cpsr = 0x50;
@@ -127,7 +124,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
 
     queue = newQueue();
 
-    curr_prog = create_process( console_stack, &main_console);
+    curr_prog = create_process( curr_pid++, console_stack, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 
@@ -187,7 +184,11 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
-            //pcb_t *
+            pcb_t *child = create_process(curr_pid, &tos_P1, NULL);
+            memcpy(&child->ctx, ctx, sizeof(ctx_t));
+            child->ctx.gpr[ 0 ] = 0;
+            push(queue, child);
+            ctx->gpr[ 0 ] = curr_pid++;
             break;
         }
 
@@ -198,6 +199,13 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
         case 0x05: { //Exec
+
+            void *main_fn = ( void * )( ctx->gpr[ 0 ] );
+            memset(ctx, 0, sizeof(ctx_t));
+            ctx->pc = (uint32_t) main_fn;
+            ctx->sp = (uint32_t) p_stacks[ curr_stack++ ];
+
+            memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));
             break;
         }
 

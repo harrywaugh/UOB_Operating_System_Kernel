@@ -19,7 +19,7 @@ void push ( queue_t *queue, pcb_t *pcb )  {
     memcpy(newNode->pcb, pcb, sizeof(pcb_t));
     newNode->previous    = NULL;
 
-    if (queue->tail == NULL)  {                                      //Set pointers to new node
+    if (queue->head == NULL)  {                                      //Set pointers to new node
         queue->head = newNode;
     } else {
         queue->tail->previous = newNode;
@@ -68,6 +68,9 @@ void pop ( queue_t *queue, pcb_t *pcb )  {
         node_t *oldHeadNode = queue->head;
         queue->head = oldHeadNode->previous;
         free(oldHeadNode);
+    }
+    if(queue->head == NULL)  {
+        queue->tail = NULL;
     }
 }
 

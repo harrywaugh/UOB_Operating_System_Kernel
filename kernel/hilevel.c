@@ -31,6 +31,18 @@ uint32_t *console_stack = &tos_console;
 queue_t *queue;
 pcb_t *curr_prog;
 
+pcb_t *create_process(uint32_t *stackp, void *main_fn)  {
+    pcb_t *pcb = (pcb_t *)malloc(sizeof(pcb_t));
+    memset( pcb, 0, sizeof( pcb_t ) );
+    pcb->pid      = 0;
+    pcb->priority = 0;
+    pcb->status   = STATUS_READY;
+    pcb->ctx.cpsr = 0x50;
+    pcb->ctx.sp   = ( uint32_t )( stackp );
+    pcb->ctx.pc   = ( uint32_t )( main_fn  );
+    pcb->queue    = 0;
+    return pcb;
+}
 
 void put_str( char* str )  {
     for (int i = 0; str[i] != '\0'; i++ )  PL011_putc( UART0, str[i], true);
@@ -115,15 +127,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
 
     queue = newQueue();
 
-    curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
-    memset( curr_prog, 0, sizeof( pcb_t ) );
-    curr_prog->pid      = 0;
-    curr_prog->priority = 0;
-    curr_prog->status   = STATUS_READY;
-    curr_prog->ctx.cpsr = 0x50;
-    curr_prog->ctx.sp   = ( uint32_t )( console_stack );
-    curr_prog->ctx.pc   = ( uint32_t )( &main_console  );
-    curr_prog->queue    = 0;
+    curr_prog = create_process( console_stack, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 
@@ -157,6 +161,8 @@ void hilevel_handler_irq( ctx_t* ctx) {
     GICC0->EOIR = id;
 }
 
+
+
 void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
   /* Based on the identified encoded as an immediate operand in the
    * instruction,
@@ -181,6 +187,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
+            //pcb_t *
             break;
         }
 

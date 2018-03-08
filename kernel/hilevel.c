@@ -28,8 +28,9 @@ uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_
 
 uint32_t *console_stack = &tos_console;
 
-queue_t *queues[QUEUENO];
+queue_t *queue;
 pcb_t *curr_prog;
+
 
 void put_str( char* str )  {
     for (int i = 0; str[i] != '\0'; i++ )  PL011_putc( UART0, str[i], true);
@@ -40,12 +41,12 @@ int min (int a, int b)  {
     return (a < b) ? a : b;
 }
 
-int activeQueue()  {
-    int i = 0;
-    while ( i < QUEUENO && isEmpty(queues[ i++ ]));
-
-    return i-1;
-}
+// int activeQueue()  {
+//     int i = 0;
+//     while ( i < QUEUENO && isEmpty(queues[ i++ ]));
+//
+//     return i-1;
+// }
 
 void scheduler( ctx_t* ctx ) {
 
@@ -68,6 +69,14 @@ void scheduler( ctx_t* ctx ) {
     //     curr_prog->status = STATUS_EXECUTING;
     // }                                 // If program wasn't switched, they're all done
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
+    if (curr_prog->status != STATUS_TERMINATED)
+        curr_prog->status = STATUS_READY;
+    push(queue, curr_prog);
+    pop(queue, curr_prog);
+    if (curr_prog->status == STATUS_READY)  {                                         //Check if program is ready
+         memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
+         curr_prog->status = STATUS_EXECUTING;
+     }
 
     return;
 }
@@ -103,6 +112,8 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     // pop(queues[ activeQueue() ], curr_prog);
     // memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     // curr_prog->status = STATUS_EXECUTING;
+
+    queue = newQueue();
 
     curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
     memset( curr_prog, 0, sizeof( pcb_t ) );
@@ -155,30 +166,39 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
    * - write any return value back to preserved usr mode registers.
    */
 
-  switch( id ) {
-    case 0x01 : { // 0x01 => write( fd, x, n )
-      int   fd = ( int   )( ctx->gpr[ 0 ] );
-      char*  x = ( char* )( ctx->gpr[ 1 ] );
-      int    n = ( int   )( ctx->gpr[ 2 ] );
+      switch( id ) {
+        case 0x01 : { // 0x01 => write( fd, x, n )
+          int   fd = ( int   )( ctx->gpr[ 0 ] );
+          char*  x = ( char* )( ctx->gpr[ 1 ] );
+          int    n = ( int   )( ctx->gpr[ 2 ] );
 
-      for( int i = 0; i < n; i++ ) {
-        PL011_putc( UART0, *x++, true );
-      }
+          for( int i = 0; i < n; i++ ) {
+            PL011_putc( UART0, *x++, true );
+          }
 
-      ctx->gpr[ 0 ] = n;
-      break;
+          ctx->gpr[ 0 ] = n;
+          break;
+        }
+
+        case 0x03: { //Fork
+            break;
+        }
+
+        case 0x04: { //0x04 => exit(x)
+            curr_prog->status = STATUS_TERMINATED;
+            put_str("\nProgram finished.\n\0");
+            scheduler(ctx);
+            break;
+        }
+        case 0x05: { //Exec
+            break;
+        }
+
+        default   : { // 0x?? => unknown/unsupported
+          break;
+        }
+
+
+        return;
     }
-    case 0x04: { //0x04 => exit(x)
-        curr_prog->status = STATUS_TERMINATED;
-        put_str("\nProgram finished.\n\0");
-        scheduler(ctx);
-        break;
-    }
-
-    default   : { // 0x?? => unknown/unsupported
-      break;
-    }
-  }
-
-  return;
 }

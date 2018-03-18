@@ -184,7 +184,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
-            pcb_t *child = create_process(curr_pid, p_stacks[curr_stack], NULL);
+            pcb_t *child = create_process(curr_pid, NULL, NULL);
             memcpy(&child->ctx, ctx, sizeof(ctx_t));
             child->ctx.gpr[ 0 ] = 0;
             push(queue, child);

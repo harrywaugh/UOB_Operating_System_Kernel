@@ -42,19 +42,19 @@ extern void main_P5();
 
 void* load( char* x ) {
     if     ( 0 == strcmp( x, "P1" ) ) {
-      return &main_P1;
+        return &main_P1;
     }
     if     ( 0 == strcmp( x, "P2" ) ) {
-      return &main_P2;
+        return &main_P2;
     }
     if     ( 0 == strcmp( x, "P3" ) ) {
-    return &main_P3;
+        return &main_P3;
     }
     else if( 0 == strcmp( x, "P4" ) ) {
-    return &main_P4;
+        return &main_P4;
     }
     else if( 0 == strcmp( x, "P5" ) ) {
-    return &main_P5;
+        return &main_P5;
     }
 
     return NULL;
@@ -96,11 +96,13 @@ void main_console() {
   char* p, x[ 1024 ];
 
   while( 1 ) {
-    puts( "shell$ ", 7 ); gets( x, 1024 ); p = strtok( x, " " );
+    puts( "shell$ ", 7 );
+    gets( x, 1024 );
+    p = strtok( x, " " );
 
     if     ( 0 == strcmp( p, "execute"   ) ) {
       pid_t pid = fork();
-
+      
       if( 0 == pid ) {
         exec( load( strtok( NULL, " " ) ) );
       }

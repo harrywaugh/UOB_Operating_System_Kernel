@@ -199,12 +199,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
         case 0x05: { //Exec
-
-            void *main_fn = ( void * )( ctx->gpr[ 0 ] );
-            memset(ctx, 0, sizeof(ctx_t));
-            ctx->pc = (uint32_t) main_fn;
+            void *main_fn = ( void * )( ctx->gpr[ 0 ]);
             ctx->sp = (uint32_t) p_stacks[ curr_stack++ ];
-
+            ctx->pc = (uint32_t) main_fn;
             memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));
             break;
         }

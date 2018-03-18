@@ -13,6 +13,7 @@ int curr_pid = 1;
 int curr_stack = 0;
 
 extern void      main_console();
+extern void      main_P1();
 extern uint32_t  tos_console;
 extern uint32_t  tos_P1;
 extern uint32_t  tos_P2;
@@ -125,6 +126,8 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     queue = newQueue();
 
     curr_prog = create_process( curr_pid++, console_stack, &main_console);
+    pcb_t*p = create_process( curr_pid++, &tos_P2, &main_P1);
+    push(queue, p);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 

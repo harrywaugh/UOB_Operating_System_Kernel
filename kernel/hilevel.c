@@ -14,17 +14,11 @@ int curr_stack = 0;
 
 extern void      main_console();
 extern void      main_P1();
-extern uint32_t  tos_console;
-extern uint32_t  tos_P1;
-extern uint32_t  tos_P2;
-extern uint32_t  tos_P3;
-extern uint32_t  tos_P4;
-extern uint32_t  tos_P5;
+extern uint32_t  tos_P, tos_svc;
+uint32_t *program_stack = &tos_P;
 
 //void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
-uint32_t *p_stacks[PROGRAMS]    = {&tos_P1,  &tos_P2,  &tos_P3,  &tos_P4,  &tos_P5  };
 
-uint32_t *console_stack = &tos_console;
 
 queue_t *queue;
 pcb_t *curr_prog;
@@ -49,6 +43,10 @@ void put_str( char* str )  {
 
 int min (int a, int b)  {
     return (a < b) ? a : b;
+}
+
+uint32_t *getStackAddress(int pid)  {
+    return (uint32_t*)(&tos_P - (0x00000400 * (pid - 1)));
 }
 
 // int activeQueue()  {
@@ -125,8 +123,8 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
 
     queue = newQueue();
 
-    curr_prog = create_process( curr_pid++, console_stack, &main_console);
-    pcb_t*p = create_process( curr_pid++, &tos_P2, &main_P1);
+    curr_prog = create_process( curr_pid, getStackAddress(curr_pid++), &main_console);
+    pcb_t*p = create_process( curr_pid, getStackAddress(curr_pid++), &main_P1);
     push(queue, p);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
@@ -187,11 +185,19 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
-            pcb_t *child = create_process(curr_pid, NULL, NULL);
+            pcb_t *child = create_process(curr_pid, NULL, &main_console);
             memcpy(&child->ctx, ctx, sizeof(ctx_t));
+            uint32_t *stackp1 = (uint32_t *) (getStackAddress(curr_pid));
+            uint32_t *stackp2 = (uint32_t *) (getStackAddress(curr_prog->pid));
+            stackp1 -= 0x00000400;
+            stackp2 -= 0x00000400;
+            memcpy(stackp1, stackp2, 0x00001000);
             child->ctx.gpr[ 0 ] = 0;
-            push(queue, child);
+            child->ctx.sp = (uint32_t) (curr_prog->ctx.sp + 0x00000400*(curr_pid - curr_prog->pid)) ;
+            //child->ctx.pc = (uint32_t) (curr_prog->ctx.pc + 0x00001000*(curr_pid - curr_prog->pid)) ;
+            child->ctx.gpr[ 0 ] = 0;
             ctx->gpr[ 0 ] = curr_pid++;
+            push(queue, child);
             break;
         }
 
@@ -203,17 +209,15 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
         case 0x05: { //Exec
             void *main_fn = ( void * )( ctx->gpr[ 0 ]);
-            ctx->sp = (uint32_t) p_stacks[ curr_stack++ ];
+            memset(getStackAddress(curr_prog->pid), 0, 0x00001000);
+            ctx->sp = (uint32_t) getStackAddress(curr_prog->pid);
             ctx->pc = (uint32_t) main_fn;
             memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));
             break;
         }
-
         default   : { // 0x?? => unknown/unsupported
           break;
         }
-
-
         return;
     }
 }

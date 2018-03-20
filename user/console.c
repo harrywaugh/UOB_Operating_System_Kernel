@@ -113,7 +113,10 @@ void main_console() {
             pid_t pid = atoi( strtok( NULL, " " ) );
             int   s   = atoi( strtok( NULL, " " ) );
 
-            kill( pid, s );
+            if ( (bool) kill( pid, s ) )  puts( "Program terminated.\n", 20 );
+            else                          puts( "Program not terminated.\n"    , 24 );
+
+
         }
         else {
             puts( "unknown command\n", 16 );

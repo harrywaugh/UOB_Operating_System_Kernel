@@ -30,6 +30,18 @@ int getFreeStack()  {
     return -1;
 }
 
+bool terminateProgram(pid_t pid) {
+    node_t *curr_node = queue->head;
+    while ( curr_node != NULL )  {
+        if (curr_node->pcb->pid == pid)  {
+            curr_node->pcb->status = STATUS_TERMINATED;
+            return true;
+        }
+        curr_node = curr_node->previous;
+    }
+    return false;
+}
+
 uint32_t *getStackAddress(int id)  {
     return (uint32_t*)(&tos_P - (0x00000400 * id));
 }
@@ -67,14 +79,21 @@ int min (int a, int b)  {
 
 void scheduler( ctx_t* ctx ) {
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
-    if (curr_prog->status != STATUS_TERMINATED)
-        curr_prog->status = STATUS_READY;
+    curr_prog->status = STATUS_READY;
     push(queue, curr_prog);
+
     pop(queue, curr_prog);
-    if (curr_prog->status == STATUS_READY)  {                                         //Check if program is ready
-         memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
-         curr_prog->status = STATUS_EXECUTING;
-     }
+    while (curr_prog->status != STATUS_READY)  {
+        if ( curr_prog->status == STATUS_TERMINATED )  {
+            //memset(getStackAddress())
+            fullStacks[curr_prog->stack_id] = false;
+        } else {
+            push( queue, curr_prog);
+        }
+        pop(  queue, curr_prog);
+    }
+    memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
+    curr_prog->status = STATUS_EXECUTING;
 
     return;
 }
@@ -82,7 +101,7 @@ void scheduler( ctx_t* ctx ) {
 void hilevel_handler_rst( ctx_t* ctx              ) {
     queue = newQueue();
 
-    curr_prog = create_process( curr_pid, &main_console);
+    curr_prog = create_process( curr_pid++, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 
@@ -155,7 +174,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
 
-        case 0x04: { //0x04 => exit(x)
+        case 0x04: { //Exit
             curr_prog->status = STATUS_TERMINATED;
             put_str("\nProgram finished.\n\0");
             scheduler(ctx);
@@ -170,6 +189,10 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             ctx->pc = (uint32_t) main_fn;                                              // Update pc to beggining of new program
             memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));                               // Copy over ctx
             break;
+        }
+        case 0x06: { //Kill
+            pid_t pid = ctx->gpr[ 0 ];
+            ctx->gpr[ 0 ] = (int32_t) terminateProgram(pid);
         }
         default   : { // 0x?? => unknown/unsupported
           break;

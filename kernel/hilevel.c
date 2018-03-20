@@ -42,6 +42,12 @@ bool terminateProgram(pid_t pid) {
     return false;
 }
 
+bool memStackAvailable()  {
+    for ( int i = 0; i < STACKS ; i++ )
+        if (!fullStacks[i])  return true;
+    return false;
+}
+
 uint32_t *getStackAddress(int id)  {
     return (uint32_t*)(&tos_P - (0x00000400 * id));
 }
@@ -159,18 +165,21 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
-            pcb_t *child = create_process(curr_pid, &main_console);  // Create process with new pid, and give it the console fn to run. Stack = NULL
-            memcpy(&child->ctx, ctx, sizeof(ctx_t));                                          // Copy context from console to new program.
-            uint32_t *new_stack = (uint32_t *) (getStackAddress(child->stack_id));            // Get new stack location (Points to top)
-            uint32_t *console_stack = (uint32_t *) (getStackAddress(curr_prog->stack_id));    // Get console stack location (Points to top)
-            new_stack -= 0x00000400;                                                          // Update so it points to bottom of stack
-            console_stack -= 0x00000400;                                                      // Update so it points to bottom of stack
-            memcpy(new_stack, console_stack, 0x00001000);                                     // Copy stack from console to new program
-            child->ctx.sp -= 0x00001000 * (child->stack_id - curr_prog->stack_id);  // Update new sp so it points to old stack location but in own stack
-            child->ctx.gpr[ 0 ] = 0;                                                   // Set child return to 0.
-            ctx->gpr[ 0 ] = curr_pid++;                                                // Set parent return to child pid.
-            push(queue, child);                                                        // Add child to process queue.
-            free(child);
+            if ( memStackAvailable() )  {
+                pcb_t *child = create_process(curr_pid, &main_console);  // Create process with new pid, and give it the console fn to run. Stack = NULL
+                memcpy(&child->ctx, ctx, sizeof(ctx_t));                                                       // Copy context from console to new program.
+                uint32_t *new_stack = (uint32_t *) (getStackAddress(child->stack_id) - 0x00000400);            // Get new stack location (Points to top)
+                uint32_t *console_stack = (uint32_t *) (getStackAddress(curr_prog->stack_id) - 0x00000400);    // Get console stack location (Points to top)
+                memcpy(new_stack, console_stack, 0x00001000);                                     // Copy stack from console to new program
+                child->ctx.sp -= 0x00001000 * (child->stack_id - curr_prog->stack_id);  // Update new sp so it points to old stack location but in own stack
+                child->ctx.gpr[ 0 ] = 0;                                                   // Set child return to 0.
+                ctx->gpr[ 0 ] = curr_pid++;                                                // Set parent return to child pid.
+                push(queue, child);                                                        // Add child to process queue.
+                free(child);
+            } else {
+                ctx->gpr[ 0 ] = -1;
+            }
+
             break;
         }
 

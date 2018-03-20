@@ -107,7 +107,7 @@ void main_console() {
             if      ( 0  == pid )
                 exec( load( strtok( NULL, " " ) ) );
             else if ( -1 == pid )
-                puts( "Execution attempt failed.\n", 26);
+                puts( "Execution attempt failed: No stack memory exception.\n", 26);
         }
         else if( 0 == strcmp( p, "terminate" ) ) {
             pid_t pid = atoi( strtok( NULL, " " ) );

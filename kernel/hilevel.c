@@ -17,8 +17,6 @@ extern void      main_P1();
 extern uint32_t  tos_P, tos_svc;
 uint32_t *program_stack = &tos_P;
 
-//void (*p_mains[PROGRAMS])(void) = {&main_P1, &main_P2, &main_P3, &main_P4, &main_P5};
-
 
 queue_t *queue;
 pcb_t *curr_prog;
@@ -57,25 +55,6 @@ uint32_t *getStackAddress(int pid)  {
 // }
 
 void scheduler( ctx_t* ctx ) {
-
-    // memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );                                           // preserve current program
-    // if (curr_prog->status != STATUS_TERMINATED){
-    //     curr_prog->status = STATUS_READY;                                                      // update program status
-    //     int newQueue = min(QUEUENO-1, ++curr_prog->queue);
-    //     if(newQueue == 3) {
-    //         push(queues[newQueue], curr_prog);
-    //     } else {
-    //         prioritypush(queues[newQueue], curr_prog);
-    //     }
-    // }
-    //
-    // pop (queues[activeQueue()], curr_prog);
-    // TIMER0->Timer1Load = 1048576*(1 << activeQueue());
-    //
-    // if (curr_prog->status == STATUS_READY)  {                                         //Check if program is ready
-    //     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );                              // Restore new current program
-    //     curr_prog->status = STATUS_EXECUTING;
-    // }                                 // If program wasn't switched, they're all done
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
     if (curr_prog->status != STATUS_TERMINATED)
         curr_prog->status = STATUS_READY;
@@ -90,37 +69,7 @@ void scheduler( ctx_t* ctx ) {
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
-  /* Initialise PCBs representing processes stemming from execution of
-   * the two user programs.  Note in each case that
-   *
-   * - the CPSR value of 0x50 means the processor is switched into USR
-   *   mode, with IRQ interrupts enabled, and
-   * - the PC and SP values matche the entry point and top of stack.
-   */
-  //  for ( int i = 0; i < QUEUENO; i++ )  {
-  //      queues[ i ] = newQueue();
-  //  }
-  //  for ( int i = 0; i < PROGRAMS; i++ )  {
-  //      pcb_t *pcb = (pcb_t *)malloc(sizeof(pcb_t));
-  //      memset( pcb, 0, sizeof( pcb_t ) );
-  //      pcb->pid      = i+1;
-  //      pcb->priority = i * 10;
-  //      pcb->status   = STATUS_READY;
-  //      pcb->ctx.cpsr = 0x50;
-  //      pcb->ctx.sp   = ( uint32_t )( p_stacks[i] );
-  //      pcb->ctx.pc   = ( uint32_t )( p_mains[i]  );
-  //      pcb->queue    = 0;
-  //      prioritypush(queues[ 0 ], pcb);
-  //  }
-    /* Once the PCBs are initialised, we (arbitrarily) select one to be
-    * restored (i.e., executed) when the function then returns.
-    */
-
-    // curr_prog = (pcb_t *)malloc(sizeof(pcb_t));
-    // pop(queues[ activeQueue() ], curr_prog);
-    // memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
-    // curr_prog->status = STATUS_EXECUTING;
-
+  
     queue = newQueue();
 
     curr_prog = create_process( curr_pid, getStackAddress(curr_pid++), &main_console);

@@ -93,31 +93,32 @@ void* load( char* x ) {
  */
 
 void main_console() {
-  char* p, x[ 1024 ];
+    char* p, x[ 1024 ];
 
-  while( 1 ) {
-    puts( "shell$ ", 7 );
-    gets( x, 1024 );
-    p = strtok( x, " " );
+    while( 1 ) {
+        puts( "shell$ ", 7 );
+        gets( x, 1024 );
+        p = strtok( x, " " );
 
 
-    if     ( 0 == strcmp( p, "execute"   ) ) {
-      pid_t pid = fork();
+        if     ( 0 == strcmp( p, "execute"   ) ) {
+            pid_t pid = fork();
 
-      if( 0 == pid ) {
-        exec( load( strtok( NULL, " " ) ) );
-      }
+            if      ( 0  == pid )
+                exec( load( strtok( NULL, " " ) ) );
+            else if ( -1 == pid )
+                puts( "Execution attempt failed.\n", 26);
+        }
+        else if( 0 == strcmp( p, "terminate" ) ) {
+            pid_t pid = atoi( strtok( NULL, " " ) );
+            int   s   = atoi( strtok( NULL, " " ) );
+
+            kill( pid, s );
+        }
+        else {
+            puts( "unknown command\n", 16 );
+        }
     }
-    else if( 0 == strcmp( p, "terminate" ) ) {
-      pid_t pid = atoi( strtok( NULL, " " ) );
-      int   s   = atoi( strtok( NULL, " " ) );
 
-      kill( pid, s );
-    }
-    else {
-      puts( "unknown command\n", 16 );
-    }
-  }
-
-  exit( EXIT_SUCCESS );
+    exit( EXIT_SUCCESS );
 }

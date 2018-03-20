@@ -185,19 +185,17 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
 
         case 0x03: { //Fork
-            pcb_t *child = create_process(curr_pid, NULL, &main_console);
-            memcpy(&child->ctx, ctx, sizeof(ctx_t));
-            uint32_t *stackp1 = (uint32_t *) (getStackAddress(curr_pid));
-            uint32_t *stackp2 = (uint32_t *) (getStackAddress(curr_prog->pid));
-            stackp1 -= 0x00000400;
-            stackp2 -= 0x00000400;
-            memcpy(stackp1, stackp2, 0x00001000);
-            child->ctx.gpr[ 0 ] = 0;
-            child->ctx.sp = (uint32_t) (curr_prog->ctx.sp + 0x00000400*(curr_pid - curr_prog->pid)) ;
-            //child->ctx.pc = (uint32_t) (curr_prog->ctx.pc + 0x00001000*(curr_pid - curr_prog->pid)) ;
-            child->ctx.gpr[ 0 ] = 0;
-            ctx->gpr[ 0 ] = curr_pid++;
-            push(queue, child);
+            pcb_t *child = create_process(curr_pid, NULL, &main_console);  // Create process with new pid, and give it the console fn to run. Stack = NULL
+            memcpy(&child->ctx, ctx, sizeof(ctx_t));                                   // Copy context from console to new program.
+            uint32_t *new_stack = (uint32_t *) (getStackAddress(curr_pid));            // Get new stack location (Points to top)
+            uint32_t *console_stack = (uint32_t *) (getStackAddress(curr_prog->pid));  // Get console stack location (Points to top)
+            new_stack -= 0x00000400;                                                   // Update so it points to bottom of stack
+            console_stack -= 0x00000400;                                               // Update so it points to bottom of stack
+            memcpy(new_stack, console_stack, 0x00001000);                              // Copy stack from console to new program
+            child->ctx.sp -= 0x00001000 * (curr_pid - curr_prog->pid);                 // Update new sp so it points to old stack location but in own stack
+            child->ctx.gpr[ 0 ] = 0;                                                   // Set child return to 0.
+            ctx->gpr[ 0 ] = curr_pid++;                                                // Set parent return to child pid.
+            push(queue, child);                                                        // Add child to process queue.
             break;
         }
 
@@ -208,11 +206,13 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
         case 0x05: { //Exec
-            void *main_fn = ( void * )( ctx->gpr[ 0 ]);
-            memset(getStackAddress(curr_prog->pid), 0, 0x00001000);
-            ctx->sp = (uint32_t) getStackAddress(curr_prog->pid);
-            ctx->pc = (uint32_t) main_fn;
-            memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));
+            void *main_fn = ( void * )( ctx->gpr[ 0 ]);                                // Get new main fn for program
+            uint32_t *stack = (uint32_t *) (getStackAddress(curr_pid));                // Get stack location (Top)
+            ctx->sp = (uint32_t) stack;                                                // Set sp to start from top of stack
+            stack -= 0x00000400;                                                   // Move to bottom of stack
+            memset(stack, 0, 0x00001000);                                              // Clear new programs stack
+            ctx->pc = (uint32_t) main_fn;                                              // Update pc to beggining of new program
+            memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));                               // Copy over ctx
             break;
         }
         default   : { // 0x?? => unknown/unsupported

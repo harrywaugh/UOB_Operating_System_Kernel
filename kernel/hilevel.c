@@ -193,8 +193,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             void *main_fn = ( void * )( ctx->gpr[ 0 ]);                                // Get new main fn for program
             uint32_t *stack = (uint32_t *) (getStackAddress(curr_prog->stack_id));     // Get stack location (Top)
             ctx->sp = (uint32_t) stack;                                                // Set sp to start from top of stack
-            stack -= 0x00000400;                                                       // Move to bottom of stack
-            memset(stack, 0, 0x00001000);                                              // Clear new programs stack
+            memset(stack - 0x00000400, 0, 0x00001000);                                              // Clear new programs stack
             ctx->pc = (uint32_t) main_fn;                                              // Update pc to beggining of new program
             memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));                               // Copy over ctx
             break;

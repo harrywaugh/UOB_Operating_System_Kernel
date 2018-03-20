@@ -69,12 +69,12 @@ void scheduler( ctx_t* ctx ) {
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
-  
+
     queue = newQueue();
 
     curr_prog = create_process( curr_pid, getStackAddress(curr_pid++), &main_console);
-    pcb_t*p = create_process( curr_pid, getStackAddress(curr_pid++), &main_P1);
-    push(queue, p);
+    //pcb_t*p = create_process( curr_pid, getStackAddress(curr_pid++), &main_P1);
+    //push(queue, p);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 
@@ -156,7 +156,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
         case 0x05: { //Exec
             void *main_fn = ( void * )( ctx->gpr[ 0 ]);                                // Get new main fn for program
-            uint32_t *stack = (uint32_t *) (getStackAddress(curr_pid));                // Get stack location (Top)
+            uint32_t *stack = (uint32_t *) (getStackAddress(curr_prog->pid));          // Get stack location (Top)
             ctx->sp = (uint32_t) stack;                                                // Set sp to start from top of stack
             stack -= 0x00000400;                                                   // Move to bottom of stack
             memset(stack, 0, 0x00001000);                                              // Clear new programs stack

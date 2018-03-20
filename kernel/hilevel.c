@@ -73,8 +73,9 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     queue = newQueue();
 
     curr_prog = create_process( curr_pid, getStackAddress(curr_pid++), &main_console);
-    //pcb_t*p = create_process( curr_pid, getStackAddress(curr_pid++), &main_P1);
-    //push(queue, p);
+    pcb_t* p = create_process( curr_pid, getStackAddress(curr_pid++), &main_P1);
+    push(queue, p);
+    free(p);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
 

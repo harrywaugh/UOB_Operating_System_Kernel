@@ -7,7 +7,7 @@
 
 #include "hilevel.h"
 #include "queue.h"
-#define STACKS 6
+#define STACKS 17
 #define QUEUENO 4
 
 extern void      main_console();

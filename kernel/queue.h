@@ -4,19 +4,21 @@
 
 struct node_t {
     struct node_t* previous;
-    pcb_t *pcb;
+    void *item;
 };
 typedef struct node_t node_t;
 
 typedef struct {
     node_t* tail;
     node_t* head;
+    int b;
 } queue_t;
 
-queue_t *newQueue ();
+
+queue_t *newQueue (int b);
 
 bool isEmpty ( queue_t *queue );
-void push ( queue_t *queue, pcb_t *pcb );
-void prioritypush ( queue_t *queue, pcb_t *pcb );
-void peek ( queue_t *queue, pcb_t *pcb );
-void pop  ( queue_t *queue, pcb_t *pcb );
+void push ( queue_t *queue, void *p );
+void prioritypush ( queue_t *queue, void *p );
+void peek ( queue_t *queue, void *p );
+void pop  ( queue_t *queue, void *p );

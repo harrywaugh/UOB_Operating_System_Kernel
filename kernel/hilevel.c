@@ -33,8 +33,9 @@ int getFreeStack()  {
 bool terminateProgram(pid_t pid) {
     node_t *curr_node = queue->head;
     while ( curr_node != NULL )  {
-        if (curr_node->pcb->pid == pid)  {
-            curr_node->pcb->status = STATUS_TERMINATED;
+        pcb_t *pcb_temp = (pcb_t *)curr_node->item;
+        if (pcb_temp->pid == pid)  {
+            pcb_temp->status = STATUS_TERMINATED;
             return true;
         }
         curr_node = curr_node->previous;
@@ -87,8 +88,8 @@ void scheduler( ctx_t* ctx ) {
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_READY;
     push(queue, curr_prog);
-
     pop(queue, curr_prog);
+
     while (curr_prog->status != STATUS_READY)  {
         if ( curr_prog->status == STATUS_TERMINATED )  {
             //memset(getStackAddress())
@@ -105,8 +106,7 @@ void scheduler( ctx_t* ctx ) {
 }
 
 void hilevel_handler_rst( ctx_t* ctx              ) {
-    queue = newQueue();
-
+    queue = newQueue(sizeof(pcb_t));
     curr_prog = create_process( curr_pid++, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;

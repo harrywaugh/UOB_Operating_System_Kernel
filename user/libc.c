@@ -92,15 +92,15 @@ int  read( int fd,       void* x, size_t n ) {
 }
 
 int  fork() {
-  int r;
+    int r;
 
-  asm volatile( "svc %1     \n" // make system call SYS_FORK
+    asm volatile( "svc %1     \n" // make system call SYS_FORK
                 "mov %0, r0 \n" // assign r  = r0
               : "=r" (r)
               : "I" (SYS_FORK)
               : "r0" );
 
-  return r;
+    return r;
 }
 
 void exit( int x ) {
@@ -146,4 +146,16 @@ void nice( int pid, int x ) {
               : "r0", "r1" );
 
   return;
+}
+
+int  pipe() {
+    int r;
+
+    asm volatile( "svc %1     \n" // make system call SYS_FORK
+                "mov %0, r0 \n" // assign r  = r0
+              : "=r" (r)
+              : "I" (SYS_PIPE)
+              : "r0" );
+
+    return r;
 }

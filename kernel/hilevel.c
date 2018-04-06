@@ -8,6 +8,8 @@
 #include "hilevel.h"
 #include "queue.h"
 #define STACKS 18
+//FIRST TWO pipes are reserved
+#define PIPES 5
 #define QUEUENO 4
 
 extern void      main_console();
@@ -16,6 +18,8 @@ extern uint32_t  tos_P;
 int curr_pid = 1;
 
 bool fullStacks[STACKS];
+bool freePipes[PIPES];
+queue_t *pipes[PIPES];
 
 queue_t *queue;
 pcb_t *curr_prog;
@@ -47,6 +51,12 @@ bool memStackAvailable()  {
     for ( int i = 0; i < STACKS ; i++ )
         if (!fullStacks[i])  return true;
     return false;
+}
+
+int getFreePipe()  {
+    for ( int i = 0; i < PIPES ; i++ )
+        if (freePipes[i])  return i;
+    return -1;
 }
 
 uint32_t *getStackAddress(int id)  {
@@ -91,7 +101,6 @@ void scheduler( ctx_t* ctx ) {
 
     while (curr_prog->status != STATUS_READY)  {
         if ( curr_prog->status == STATUS_TERMINATED )  {
-            //memset(getStackAddress())
             fullStacks[curr_prog->stack_id] = false;
         } else {
             push( queue, curr_prog);
@@ -109,6 +118,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     curr_prog = create_process( curr_pid++, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
+    for( int i = 2; i < PIPES; i++)  freePipes = true;
 
     TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
     TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer
@@ -155,9 +165,12 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
           char*  x = ( char* )( ctx->gpr[ 1 ] );
           int    n = ( int   )( ctx->gpr[ 2 ] );
 
-          for( int i = 0; i < n; i++ ) {
-            PL011_putc( UART0, *x++, true );
+          if( fd == 1)  {   //STDOUT_FILENO
+              for( int i = 0; i < n; i++ ) {
+                PL011_putc( UART0, *x++, true );
+              }
           }
+
 
           ctx->gpr[ 0 ] = n;
           break;
@@ -203,6 +216,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
         case 0x08: { //Pipe
+            int freePipe = getFreePipe();
+            freePipes[freePipe] = false;
+            ctx->gpr[ 0 ] = freePipe;
             break;
         }
         default   : { // 0x?? => unknown/unsupported

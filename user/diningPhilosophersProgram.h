@@ -12,4 +12,9 @@
 #include "libc.h"
 #include "console.h"
 
+typedef struct {
+    int             read;
+    int             write;
+} pfd_t;
+
 #endif

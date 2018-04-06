@@ -14,13 +14,15 @@ void putStr( char* x, int n ) {
 void main_philosophers_program() {
 
     pid_t philosophers[PHILOSOPHERS];
-    for (int i = 0; i < PHILOSOPHERS; i++)  {
-        philosophers[ i ] = fork();
-        if ( philosophers[ i ] == 0 )  {
-            exec(&main_philosopher);
-        } else if ( philosophers[ i ] == -1) {
-            putStr( "Execution attempt failed: No stack memory exception.\n", 54);
-        }
+    pfd_t pipeFileDescriptors[PHILOSOPHERS];
+
+    /////////////////////////////////////FORK child 1
+    philosophers[ 0 ] = fork();
+    if ( philosophers[ 0 ] == 0 )  {  //SUCCESS
+
+        exec(&main_philosopher);
+    } else if ( philosophers[ 0 ] == -1) { //FAILURE
+        putStr( "Execution attempt failed: No stack memory exception.\n", 54);
     }
 
     exit( EXIT_SUCCESS );

@@ -2,9 +2,11 @@
 
 
 void main_philosopher() {
-  while( 1 ) {
-    write( STDOUT_FILENO, "Philospher", 10 );
-  }
+    write( STDOUT_FILENO, "Philospher Started...\n", 22 );
+    int count = 0;
+    while( 1 ) {
+        count++;
+    }
 
-  exit( EXIT_SUCCESS );
+    exit( EXIT_SUCCESS );
 }

@@ -5,6 +5,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <string.h>
+
+#include "PL011.h"
+
 #include "libc.h"
+#include "console.h"
 
 #endif

@@ -1,6 +1,7 @@
 #include "philosopher.h"
 
-void main_Philosopher() {
+
+void main_philosopher() {
   while( 1 ) {
     write( STDOUT_FILENO, "Philospher", 10 );
   }

@@ -39,7 +39,7 @@ extern void main_P2();
 extern void main_P3();
 extern void main_P4();
 extern void main_P5();
-extern void main_Philosophers_Program();
+extern void main_philosophers_program();
 
 void* load( char* x ) {
     if     ( 0 == strcmp( x, "P1" ) ) {
@@ -58,7 +58,7 @@ void* load( char* x ) {
         return &main_P5;
     }
     else if( 0 == strcmp( x, "DP" ) ) {
-        return &main_Philosophers_Program;
+        return &main_philosophers_program;
     }
 
     return NULL;
@@ -107,7 +107,6 @@ void main_console() {
 
         if     ( 0 == strcmp( p, "execute"   ) ) {
             pid_t pid = fork();
-
             if      ( 0  == pid )
                 exec( load( strtok( NULL, " " ) ) );
             else if ( -1 == pid )

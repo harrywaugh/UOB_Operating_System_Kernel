@@ -1,5 +1,5 @@
-#ifndef __Philosopher_H
-#define __Philosopher_H
+#ifndef __philosopher_program_H
+#define __philosopher_program_H
 
 #include <stdbool.h>
 #include <stddef.h>

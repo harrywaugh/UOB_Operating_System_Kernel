@@ -1,4 +1,4 @@
-#include "Philosopher.h"
+#include "philosopher.h"
 
 void main_Philosopher() {
   while( 1 ) {

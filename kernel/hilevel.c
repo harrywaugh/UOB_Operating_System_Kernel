@@ -7,7 +7,7 @@
 
 #include "hilevel.h"
 #include "queue.h"
-#define STACKS 17
+#define STACKS 18
 #define QUEUENO 4
 
 extern void      main_console();
@@ -75,7 +75,6 @@ void put_str( char* str )  {
 int min (int a, int b)  {
     return (a < b) ? a : b;
 }
-
 
 // int activeQueue()  {
 //     int i = 0;
@@ -201,6 +200,10 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         case 0x06: { //Kill
             pid_t pid = ctx->gpr[ 0 ];
             ctx->gpr[ 0 ] = (int32_t) terminateProgram(pid);
+            break;
+        }
+        case 0x08: { //Pipe
+            break;
         }
         default   : { // 0x?? => unknown/unsupported
           break;

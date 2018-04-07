@@ -38,7 +38,7 @@ typedef int pid_t;
 #define SYS_EXEC      ( 0x05 )
 #define SYS_KILL      ( 0x06 )
 #define SYS_NICE      ( 0x07 )
-#define SYS_PIPE      ( 0x08 )
+#define SYS_MKFIFO    ( 0x08 )
 #define SYS_CLOSE     ( 0x09 )
 
 #define SIG_TERM      ( 0x00 )
@@ -75,7 +75,7 @@ extern void exec( const void* x );
 extern int  kill( pid_t pid, int x );
 // for process identified by pid, set  priority to x
 extern void nice( pid_t pid, int x );
-//Get a free pipe, return pipe id. Returns -1 on failure.
-extern int  pipe();
+//Get a free pipe, return pipe id. Returns -1 on failure
+extern int  mkfifo(char *name, int mode);
 
 #endif

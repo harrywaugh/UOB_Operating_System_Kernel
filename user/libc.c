@@ -148,14 +148,18 @@ void nice( int pid, int x ) {
   return;
 }
 
-int  pipe() {
+int  mkfifo(char *name, int mode) {
     int r;
 
-    asm volatile( "svc %1     \n" // make system call SYS_FORK
-                "mov %0, r0 \n" // assign r  = r0
-              : "=r" (r)
-              : "I" (SYS_PIPE)
-              : "r0" );
+    asm volatile( "mov r0, %2 \n" // assign r0 =  name
+                  "mov r1, %3 \n" // assign r1 =    mode
+                  "svc %1     \n" // make system call SYS_KILL
+                  "mov %0, r0 \n" // assign r0 =    r
+                : "=r" (r)
+                : "I" (SYS_MKFIFO), "r" (name), "r" (mode)
+                : "r0", "r1" );
+
+    return r;
 
     return r;
 }

@@ -6,20 +6,18 @@
  */
 
 #include "hilevel.h"
-#include "queue.h"
 #define STACKS 18
-//FIRST TWO pipes are reserved
-#define PIPES 5
 #define QUEUENO 4
 
 extern void      main_console();
 extern uint32_t  tos_P;
 
 int curr_pid = 1;
+int currFd   = 3;
 
 bool fullStacks[STACKS];
-bool freePipes[PIPES];
-queue_t *pipes[PIPES];
+pipe_t **pipes;
+int pipesLength = 1;
 
 queue_t *queue;
 pcb_t *curr_prog;
@@ -53,10 +51,13 @@ bool memStackAvailable()  {
     return false;
 }
 
-int getFreePipe()  {
-    for ( int i = 0; i < PIPES ; i++ )
-        if (freePipes[i])  return i;
-    return -1;
+void allocateNewPipe( char *name )  {
+    void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
+    if (p)    pipes = p;
+    pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
+    pipes[ pipesLength ] = {newQueue((size_t)1), name, currFd++}
+    pipesLength++;
+
 }
 
 uint32_t *getStackAddress(int id)  {
@@ -118,7 +119,10 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
     curr_prog = create_process( curr_pid++, &main_console);
     memcpy( ctx, &curr_prog->ctx, sizeof( ctx_t ) );
     curr_prog->status = STATUS_EXECUTING;
-    for( int i = 2; i < PIPES; i++)  freePipes = true;
+
+    pipes = (pipe_t **)malloc(pipesLength * sizeof(pipe_t *));  //Allocate memory for pointer to array of pipe pointers
+
+
 
     TIMER0->Timer1Load  = 0x00100000; // select period = 2^20 ticks ~= 1 sec
     TIMER0->Timer1Ctrl  = 0x00000002; // select 32-bit   timer
@@ -215,10 +219,15 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             ctx->gpr[ 0 ] = (int32_t) terminateProgram(pid);
             break;
         }
-        case 0x08: { //Pipe
-            int freePipe = getFreePipe();
-            freePipes[freePipe] = false;
-            ctx->gpr[ 0 ] = freePipe;
+        case 0x08: { //Mkfifo
+            char *name = (int *) ctx->gpr[ 0 ];
+            int mode =  (int *) ctx->gpr[ 1 ];
+            if( pipesLength != 1 )  allocateNewPipe(name)
+            else {
+                pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
+                pipes[ pipesLength ] = {newQueue((size_t)1), name, currFd++};
+            }
+            ctx->gpr[ 0 ] = 0;
             break;
         }
         default   : { // 0x?? => unknown/unsupported

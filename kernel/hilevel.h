@@ -25,6 +25,8 @@
 
 #include "lolevel.h"
 #include     "int.h"
+#include "queue.h"
+
 
 /* The kernel source code is made simpler and more consistent by using
  * some human-readable type definitions:
@@ -63,5 +65,11 @@ typedef struct {
      int          stack_id;
      int             queue;
 } pcb_t;
+
+typedef struct {
+    queue_t* queue;
+    char*    name;
+    int      fd;
+} pipe_t;
 
 #endif

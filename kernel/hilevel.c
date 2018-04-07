@@ -55,7 +55,7 @@ void allocateNewPipe( char *name )  {
     void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
     if (p)    pipes = p;
     pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
-    pipes[ pipesLength ] = {newQueue((size_t)1), name, currFd++}
+    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++};
     pipesLength++;
 
 }
@@ -173,6 +173,8 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
               for( int i = 0; i < n; i++ ) {
                 PL011_putc( UART0, *x++, true );
               }
+          } else {
+
           }
 
 
@@ -220,12 +222,12 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             break;
         }
         case 0x08: { //Mkfifo
-            char *name = (int *) ctx->gpr[ 0 ];
-            int mode =  (int *) ctx->gpr[ 1 ];
-            if( pipesLength != 1 )  allocateNewPipe(name)
+            char *name = (char *) ctx->gpr[ 0 ];
+            int mode =   (int   ) ctx->gpr[ 1 ];
+            if( pipesLength != 1 )  allocateNewPipe(name);
             else {
                 pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
-                pipes[ pipesLength ] = {newQueue((size_t)1), name, currFd++};
+                *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++};
             }
             ctx->gpr[ 0 ] = 0;
             break;

@@ -40,6 +40,7 @@ typedef int pid_t;
 #define SYS_NICE      ( 0x07 )
 #define SYS_MKFIFO    ( 0x08 )
 #define SYS_CLOSE     ( 0x09 )
+#define SYS_OPEN      ( 0x0a )
 
 #define SIG_TERM      ( 0x00 )
 #define SIG_QUIT      ( 0x01 )
@@ -77,7 +78,8 @@ extern int  kill( pid_t pid, int x );
 extern void nice( pid_t pid, int x );
 //Allocate a pipe, return 0 on success. Returns -1 on failure
 extern int  mkfifo(char *name, int mode);
-//
+//Open a pipe, returns the file descriptor, returns -1 on error.
+extern int  open(char *name, int flags);
 
 
 #endif

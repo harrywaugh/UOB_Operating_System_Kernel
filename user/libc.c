@@ -158,8 +158,18 @@ int  mkfifo(char *name, int mode) {
                 : "=r" (r)
                 : "I" (SYS_MKFIFO), "r" (name), "r" (mode)
                 : "r0", "r1" );
-
     return r;
+}
 
+int open (char *name, int flags)  {
+    int r;
+
+    asm volatile( "mov r0, %2 \n" // assign r0 =  name
+                  "mov r1, %3 \n" // assign r1 =    mode
+                  "svc %1     \n" // make system call SYS_KILL
+                  "mov %0, r0 \n" // assign r0 =    r
+                : "=r" (r)
+                : "I" (SYS_OPEN), "r" (name), "r" (flags)
+                : "r0", "r1" );
     return r;
 }

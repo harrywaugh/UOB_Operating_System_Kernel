@@ -6,8 +6,11 @@ void main_philosopher() {
     int id;
     int count = 0;
     int r = mkfifo ("pipeToPhilosopher2", 0666);
+    int pipeFd = open ("pipeToPhilosopher2", 0666);
+    write(pipeFd, "pipe data", 9);
 
-    int x = open ("pipeToPhilosopher2", 0666);
+
+
     while( 1 ) {
         count++;
     }

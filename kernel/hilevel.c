@@ -67,6 +67,19 @@ int openPipe( char *name)  {
     return -1;
 }
 
+int getPipeId(int fd)  {
+    for(int i = 0; i < pipesLength; i++)  {
+        if(pipes[i]->fd == fd) return i;
+    }
+    return -1;
+}
+
+void writeBytesToQueue(queue_t *q, void *x, int n)  {
+    for(int i = 0; i < n; i++)  {
+        push(q, x++);
+    }
+}
+
 
 uint32_t *getStackAddress(int id)  {
     return (uint32_t*)(&tos_P - (0x00000400 * id));
@@ -174,22 +187,23 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
       switch( id ) {
         case 0x01 : { // 0x01 => write( fd, x, n )
           int   fd = ( int   )( ctx->gpr[ 0 ] );
-          char*  x = ( char* )( ctx->gpr[ 1 ] );
           int    n = ( int   )( ctx->gpr[ 2 ] );
 
           if( fd == 1)  {   //STDOUT_FILENO
+              char*  x = ( char* )( ctx->gpr[ 1 ] );
               for( int i = 0; i < n; i++ ) {
                 PL011_putc( UART0, *x++, true );
               }
+              ctx->gpr[ 0 ] = n;
           } else {
+              void*  x = ( void* )( ctx->gpr[ 1 ] );
+              int pipeId = getPipeId(fd);
+              writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
+              ctx->gpr[ 0 ] = n;
 
           }
-
-
-          ctx->gpr[ 0 ] = n;
           break;
         }
-
         case 0x03: { //Fork
             if ( memStackAvailable() )  {
                 pcb_t *child = create_process(curr_pid, &main_console);  // Create process with new pid, and give it the console fn to run. Stack = NULL
@@ -208,7 +222,6 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
             break;
         }
-
         case 0x04: { //Exit
             curr_prog->status = STATUS_TERMINATED;
             put_str("\nProgram finished.\n\0");
@@ -240,7 +253,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             ctx->gpr[ 0 ] = 0;
             break;
         }
-        case 0x0a: { //OPEN
+        case 0x0a: { //Open
             char *name = (char *) ctx->gpr[ 0 ];
             int   flags =   (int   ) ctx->gpr[ 1 ];
 

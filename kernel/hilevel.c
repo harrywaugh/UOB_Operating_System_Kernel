@@ -62,7 +62,7 @@ void allocateNewPipe( char *name )  {
 
 int openPipe( char *name)  {
     for (int i = 0; i < pipesLength; i++)  {
-        if (strcmp(name, pipes[ pipesLength ]->name) == 0) return i;
+        if (strcmp(name, pipes[ i ]->name) == 0) return i;
     }
     return -1;
 }
@@ -234,7 +234,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             int mode   = (int   ) ctx->gpr[ 1 ];
             if( pipesLength != 1 )  allocateNewPipe(name);
             else {
-                pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
+                pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
                 *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++};
             }
             ctx->gpr[ 0 ] = 0;
@@ -242,7 +242,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         }
         case 0x0a: { //OPEN
             char *name = (char *) ctx->gpr[ 0 ];
-            int   mode =   (int   ) ctx->gpr[ 1 ];
+            int   flags =   (int   ) ctx->gpr[ 1 ];
 
             int pipeID = openPipe(name);
 

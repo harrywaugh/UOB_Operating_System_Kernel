@@ -53,7 +53,7 @@ typedef int pid_t;
 #define STDERR_FILENO ( 2 )
 
 // convert ASCII string x into integer r
-extern int  atoi( char* x        );
+//extern int  atoi( char* x        );
 // convert integer x into ASCII string r
 extern void itoa( char* r, int x );
 

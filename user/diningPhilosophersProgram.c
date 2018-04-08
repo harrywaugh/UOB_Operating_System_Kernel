@@ -25,13 +25,13 @@ void main_philosophers_program() {
     }
 
     // //////////////////////////////////////FORK child 2
-    // philosophers[ 1 ] = fork();
-    // if ( philosophers[ 1 ] == 0 )  {  //SUCCESS
-    //
-    //     exec(&main_philosopher2);
-    // } else if ( philosophers[ 1 ] == -1) { //FAILURE
-    //     putStr( "Execution attempt failed: No stack memory exception.\n", 54);
-    // }
+    philosophers[ 1 ] = fork();
+    if ( philosophers[ 1 ] == 0 )  {  //SUCCESS
+
+        exec(&main_philosopher2);
+    } else if ( philosophers[ 1 ] == -1) { //FAILURE
+        putStr( "Execution attempt failed: No stack memory exception.\n", 54);
+    }
 
     exit( EXIT_SUCCESS );
 }

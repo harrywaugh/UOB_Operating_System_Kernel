@@ -7,13 +7,11 @@ void main_philosopher() {
     int count = 0;
     int r = mkfifo ("pipeToPhilosopher2", 0666);
     int pipeFd = open ("pipeToPhilosopher2", 0666);
+
     write(pipeFd, "pipe data", 9);
+    write( STDOUT_FILENO, "Written to pipe...\n", 19 );
 
 
-
-    while( 1 ) {
-        count++;
-    }
 
     exit( EXIT_SUCCESS );
 }

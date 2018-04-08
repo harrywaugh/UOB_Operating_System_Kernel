@@ -80,6 +80,11 @@ void writeBytesToQueue(queue_t *q, void *x, int n)  {
     }
 }
 
+void readBytesFromQueue(queue_t *q, void *x, int n)  {
+    for(int i = 0; i < n; i++)  {
+        pop(q, x++);
+    }
+}
 
 uint32_t *getStackAddress(int id)  {
     return (uint32_t*)(&tos_P - (0x00000400 * id));
@@ -117,8 +122,10 @@ int min (int a, int b)  {
 
 void scheduler( ctx_t* ctx ) {
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
-    curr_prog->status = STATUS_READY;
-    push(queue, curr_prog);
+    if(curr_prog->status != STATUS_TERMINATED){
+        curr_prog->status = STATUS_READY;
+        push(queue, curr_prog);
+    }
     pop(queue, curr_prog);
 
     while (curr_prog->status != STATUS_READY)  {
@@ -203,6 +210,18 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
           }
           break;
+        }
+        case 0x02 : { //Read
+            int   fd = ( int   )( ctx->gpr[ 0 ] );
+            int    n = ( int   )( ctx->gpr[ 2 ] );
+
+            if(fd > 2)  {
+                void *x = (void *) (ctx->gpr[ 1 ]);
+                int pipeId = getPipeId(fd);
+                readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
+                ctx->gpr[ 0 ] = n;
+            }
+            break;
         }
         case 0x03: { //Fork
             if ( memStackAvailable() )  {

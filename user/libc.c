@@ -7,23 +7,23 @@
 
 #include "libc.h"
 
-int  atoi( char* x        ) {
-  char* p = x; bool s = false; int r = 0;
-
-  if     ( *p == '-' ) {
-    s =  true; p++;
-  }
-  else if( *p == '+' ) {
-    s = false; p++;
-  }
-
-  for( int i = 0; *p != '\x00'; i++, p++ ) {
-    r = s ? ( r * 10 ) - ( *p - '0' ) :
-            ( r * 10 ) + ( *p - '0' ) ;
-  }
-
-  return r;
-}
+// int  atoi( char* x        ) {
+//   char* p = x; bool s = false; int r = 0;
+//
+//   if     ( *p == '-' ) {
+//     s =  true; p++;
+//   }
+//   else if( *p == '+' ) {
+//     s = false; p++;
+//   }
+//
+//   for( int i = 0; *p != '\x00'; i++, p++ ) {
+//     r = s ? ( r * 10 ) - ( *p - '0' ) :
+//             ( r * 10 ) + ( *p - '0' ) ;
+//   }
+//
+//   return r;
+// }
 
 void itoa( char* r, int x ) {
   char* p = r; int t, n;

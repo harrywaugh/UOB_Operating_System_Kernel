@@ -287,10 +287,10 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         case 0x0a: { //Open
             char *name = (char *) ctx->gpr[ 0 ];
             int   flags =   (int   ) ctx->gpr[ 1 ];
-
-            int pipeID = openPipe(name);
-
-            ctx->gpr[ 0 ] = pipes[pipeID]->fd;
+            int pipeId = openPipe(name);
+            ctx->gpr[ 0 ] = pipeId == -1 ?
+                                      -1 :
+                                      pipes[pipeId]->fd;
             break;
 
         }

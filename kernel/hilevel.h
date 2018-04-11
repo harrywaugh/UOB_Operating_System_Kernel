@@ -28,6 +28,11 @@
 #include "queue.h"
 
 
+
+#define O_RDONLY (1)
+#define O_WRONLY (2)
+#define O_RDWR   (3)
+
 /* The kernel source code is made simpler and more consistent by using
  * some human-readable type definitions:
  *
@@ -70,6 +75,8 @@ typedef struct {
     queue_t* queue;
     char*    name;
     int      fd;
+    int      owner;
+    int      group;
 } pipe_t;
 
 #endif

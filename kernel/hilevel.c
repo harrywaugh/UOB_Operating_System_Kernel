@@ -22,8 +22,6 @@ int pipesLength = 1;
 queue_t *queue;
 pcb_t *curr_prog;
 
-
-
 bool terminateProgram(pid_t pid) {
     node_t *curr_node = queue->head;
     while ( curr_node != NULL )  {
@@ -58,8 +56,11 @@ uint32_t *getStackAddress(int id)  {
 void allocateNewPipe( char *name )  {
     void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
     if (p)    pipes = p;
-    pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
-    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++};
+    char *fname = (char *)malloc(sizeof(name));
+    memcpy(fname, name, strlen(name)+1);
+    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL};
+    char *group = strtok( fname, "/" );
+    pipes[ pipesLength]->group = atoi(group);
     pipesLength++;
 
 }
@@ -275,7 +276,13 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
                 if( pipesLength != 1 )  allocateNewPipe(name);
                 else {
                     pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
-                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++};
+                    pipes[ pipesLength]->name = (char *)malloc(strlen(name)+1);
+                    char *fname = (char *)malloc(sizeof(name));
+                    memcpy(fname, name, strlen(name)+1);
+                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL};
+                    char *group = strtok( fname, "/" );
+                    int groupNo = atoi(group);
+                    pipes[ pipesLength - 1]->group = groupNo;
                 }
                 ctx->gpr[ 0 ] = 0;
             } else {

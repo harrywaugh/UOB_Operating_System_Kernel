@@ -13,7 +13,6 @@ void putStr( char* x, int n ) {
 
 
 void main_philosophers_program() {
-
     pid_t philosophers[PHILOSOPHERS];
     /////////////////////////////////////FORK child 1
     philosophers[ 0 ] = fork();

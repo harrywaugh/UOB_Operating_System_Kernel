@@ -52,6 +52,10 @@ typedef int pid_t;
 #define STDOUT_FILENO ( 1 )
 #define STDERR_FILENO ( 2 )
 
+#define O_RDONLY (1)
+#define O_WRONLY (2)
+#define O_RDWR   (3)
+
 // convert ASCII string x into integer r
 //extern int  atoi( char* x        );
 // convert integer x into ASCII string r

@@ -8,8 +8,9 @@ void main_philosopher() {
     int r = mkfifo ("pipeToPhilosopher2", 0666);
     int pipeFd = open ("pipeToPhilosopher2", 0666);
 
-    write(pipeFd, "pipe data", 9);
-    write( STDOUT_FILENO, "Written to pipe...\n", 19 );
+    write( STDOUT_FILENO, "Writing to pipe...", 18 );
+    write( pipeFd, "pipe data\n", 10);
+
 
 
 

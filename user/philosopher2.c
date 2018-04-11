@@ -7,7 +7,7 @@ void main_philosopher2() {
     int count = 0;
     int pipeFd = open("pipeToPhilosopher2", 0666);
 
-    write( STDOUT_FILENO, "Reading from pipe...\n", 21 );
+    write( STDOUT_FILENO, "Reading from pipe...", 20 );
     char *readString = (char *)malloc((size_t)9);
     read(pipeFd, readString, 9);
     write(STDOUT_FILENO, readString, 9);

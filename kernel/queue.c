@@ -63,17 +63,18 @@ void peek ( queue_t *queue, void *p )  {
     }
 }
 
-void pop ( queue_t *queue, void *p )  {
+bool pop ( queue_t *queue, void *p )  {
     if (queue->head != NULL)  {
         memcpy(p, queue->head->item, (size_t)queue->b);
         node_t *oldHeadNode = queue->head;
         queue->head = oldHeadNode->previous;
         free(oldHeadNode->item);
         free(oldHeadNode);
-    }
+    }  else  return false;
     if(queue->head == NULL)  {
         queue->tail = NULL;
     }
+    return true;
 }
 
 bool isEmpty( queue_t *queue )  {

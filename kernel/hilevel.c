@@ -74,16 +74,18 @@ int getPipeId(int fd)  {
     return -1;
 }
 
-void writeBytesToQueue(queue_t *q, void *x, int n)  {
+int writeBytesToQueue(queue_t *q, void *x, int n)  {
     for(int i = 0; i < n; i++)  {
         push(q, x++);
     }
+    return n;
 }
 
-void readBytesFromQueue(queue_t *q, void *x, int n)  {
+int readBytesFromQueue(queue_t *q, void *x, int n)  {
     for(int i = 0; i < n; i++)  {
-        pop(q, x++);
+        if(!pop(q, x++))  return i;
     }
+    return n;
 }
 
 uint32_t *getStackAddress(int id)  {
@@ -205,8 +207,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
           } else {
               void*  x = ( void* )( ctx->gpr[ 1 ] );
               int pipeId = getPipeId(fd);
-              writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
-              ctx->gpr[ 0 ] = n;
+              ctx->gpr [ 0 ] = pipeId == -1 ?
+                                         -1 :
+                                         writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
 
           }
           break;
@@ -218,8 +221,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             if(fd > 2)  {
                 void *x = (void *) (ctx->gpr[ 1 ]);
                 int pipeId = getPipeId(fd);
-                readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
-                ctx->gpr[ 0 ] = n;
+                ctx->gpr [ 0 ] = pipeId == -1 ?
+                                           -1 :
+                                           readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
             }
             break;
         }

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "hilevel.h"
+#include <stdbool.h>
 
 
 struct node_t {
@@ -21,4 +21,4 @@ bool isEmpty ( queue_t *queue );
 void push ( queue_t *queue, void *p );
 void prioritypush ( queue_t *queue, void *p );
 void peek ( queue_t *queue, void *p );
-void pop  ( queue_t *queue, void *p );
+bool pop  ( queue_t *queue, void *p );

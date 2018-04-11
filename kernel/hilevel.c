@@ -22,15 +22,7 @@ int pipesLength = 1;
 queue_t *queue;
 pcb_t *curr_prog;
 
-int getFreeStack()  {
-    int i = 0;
-    while ( fullStacks[ i ] ) i++;
-    if ( i < STACKS )  {
-        fullStacks[ i ] = true;
-        return i;
-    }
-    return -1;
-}
+
 
 bool terminateProgram(pid_t pid) {
     node_t *curr_node = queue->head;
@@ -45,10 +37,22 @@ bool terminateProgram(pid_t pid) {
     return false;
 }
 
+int getFreeStack()  {
+    int i = 0;
+    while ( fullStacks[ i ] ) i++;
+    if ( i < STACKS )  {
+        fullStacks[ i ] = true;
+        return i;
+    }
+    return -1;
+}
 bool memStackAvailable()  {
     for ( int i = 0; i < STACKS ; i++ )
         if (!fullStacks[i])  return true;
     return false;
+}
+uint32_t *getStackAddress(int id)  {
+    return (uint32_t*)(&tos_P - (0x00000400 * id));
 }
 
 void allocateNewPipe( char *name )  {
@@ -59,19 +63,23 @@ void allocateNewPipe( char *name )  {
     pipesLength++;
 
 }
-
 int openPipe( char *name)  {
     for (int i = 0; i < pipesLength; i++)  {
         if (strcmp(name, pipes[ i ]->name) == 0) return i;
     }
     return -1;
 }
-
 int getPipeId(int fd)  {
     for(int i = 0; i < pipesLength; i++)  {
         if(pipes[i]->fd == fd) return i;
     }
     return -1;
+}
+bool checkValidPipeName(char *name)  {
+    for(int i = 0; i < pipesLength; i++) {
+        if(strcmp(name, pipes[ i ]->name) == 0)  return false;
+    }
+    return true;
 }
 
 int writeBytesToQueue(queue_t *q, void *x, int n)  {
@@ -80,16 +88,11 @@ int writeBytesToQueue(queue_t *q, void *x, int n)  {
     }
     return n;
 }
-
 int readBytesFromQueue(queue_t *q, void *x, int n)  {
     for(int i = 0; i < n; i++)  {
         if(!pop(q, x++))  return i;
     }
     return n;
-}
-
-uint32_t *getStackAddress(int id)  {
-    return (uint32_t*)(&tos_P - (0x00000400 * id));
 }
 
 pcb_t *create_process(int id, void *main_fn)  {
@@ -268,12 +271,17 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         case 0x08: { //Mkfifo
             char *name = (char *) ctx->gpr[ 0 ];
             int mode   = (int   ) ctx->gpr[ 1 ];
-            if( pipesLength != 1 )  allocateNewPipe(name);
-            else {
-                pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
-                *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++};
+            if(checkValidPipeName(name))  {
+                if( pipesLength != 1 )  allocateNewPipe(name);
+                else {
+                    pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
+                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++};
+                }
+                ctx->gpr[ 0 ] = 0;
+            } else {
+                ctx->gpr[ 0 ] = -1;
             }
-            ctx->gpr[ 0 ] = 0;
+
             break;
         }
         case 0x0a: { //Open

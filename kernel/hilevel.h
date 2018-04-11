@@ -29,9 +29,9 @@
 
 
 
-#define O_RDONLY (1)
+#define O_RDONLY (4)
 #define O_WRONLY (2)
-#define O_RDWR   (3)
+#define O_RDWR   (6)
 
 /* The kernel source code is made simpler and more consistent by using
  * some human-readable type definitions:
@@ -77,6 +77,7 @@ typedef struct {
     int      fd;
     int      owner;
     int      group;
+    int      mode;
 } pipe_t;
 
 #endif

@@ -35,6 +35,17 @@ bool terminateProgram(pid_t pid) {
     return false;
 }
 
+bool checkPermissions(int user, pipe_t *pipe, int flags)  {
+    int userCatergory = 0;
+    if(curr_prog->pid == pipe->owner)  {
+        userCatergory = 2;
+    } else if(curr_prog->pid == pipe->group)  {
+        userCatergory = 1;
+    }
+    if(((pipe->mode >> 3*userCatergory) & flags) != 0) return true;
+    return false;
+}
+
 int getFreeStack()  {
     int i = 0;
     while ( fullStacks[ i ] ) i++;
@@ -53,20 +64,25 @@ uint32_t *getStackAddress(int id)  {
     return (uint32_t*)(&tos_P - (0x00000400 * id));
 }
 
-void allocateNewPipe( char *name )  {
+void allocateNewPipe( char *name, int mode)  {
     void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
     if (p)    pipes = p;
     char *fname = (char *)malloc(sizeof(name));
     memcpy(fname, name, strlen(name)+1);
-    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL};
+    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
     char *group = strtok( fname, "/" );
     pipes[ pipesLength]->group = atoi(group);
     pipesLength++;
 
 }
-int openPipe( char *name)  {
+int openPipe( char *name, int flags)  {
     for (int i = 0; i < pipesLength; i++)  {
-        if (strcmp(name, pipes[ i ]->name) == 0) return i;
+        if (strcmp(name, pipes[ i ]->name) == 0)  {
+            if(checkPermissions(curr_prog->pid, pipes[ i ], flags ))  {
+                return i;
+            }
+
+        }
     }
     return -1;
 }
@@ -114,7 +130,6 @@ void put_str( char* str )  {
     for (int i = 0; str[i] != '\0'; i++ )  PL011_putc( UART0, str[i], true);
     return;
 }
-
 int min (int a, int b)  {
     return (a < b) ? a : b;
 }
@@ -273,13 +288,13 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             char *name = (char *) ctx->gpr[ 0 ];
             int mode   = (int   ) ctx->gpr[ 1 ];
             if(checkValidPipeName(name))  {
-                if( pipesLength != 1 )  allocateNewPipe(name);
+                if( pipesLength != 1 )  allocateNewPipe(name, mode);
                 else {
                     pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
                     pipes[ pipesLength]->name = (char *)malloc(strlen(name)+1);
                     char *fname = (char *)malloc(sizeof(name));
                     memcpy(fname, name, strlen(name)+1);
-                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL};
+                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
                     char *group = strtok( fname, "/" );
                     int groupNo = atoi(group);
                     pipes[ pipesLength - 1]->group = groupNo;
@@ -294,7 +309,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
         case 0x0a: { //Open
             char *name = (char *) ctx->gpr[ 0 ];
             int   flags =   (int   ) ctx->gpr[ 1 ];
-            int pipeId = openPipe(name);
+            int pipeId = openPipe(name, flags);
             ctx->gpr[ 0 ] = pipeId == -1 ?
                                       -1 :
                                       pipes[pipeId]->fd;

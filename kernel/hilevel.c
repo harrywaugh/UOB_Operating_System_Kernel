@@ -69,8 +69,6 @@ void allocateNewPipe( char *name, int mode)  {
         void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
         if (p)    pipes = p;
     }
-
-
     pipes[ pipesLength] = (pipe_t *) malloc(sizeof(pipe_t));
     char *fname = (char *)malloc(sizeof(name));
     memcpy(fname, name, strlen(name)+1);
@@ -85,10 +83,19 @@ int getPipeFromName(char *name)  {
     }
     return -1;
 }
-void deallocatePipe(char *name)  {
-    if (pipesLength == 1)  {
-        free(pipes[0]);
+int deallocatePipe(char *name)  {
+    int pipeId = getPipeFromName(name);
+    if (pipeId == -1)  return -1;
+    else if ( pipesLength == 1 + pipeId )  {
+        free(pipes[pipeId]);
     }
+    else {
+        free(pipes[pipeId]);
+        memcpy(pipes[pipeId], pipes[pipesLength-1], sizeof(pipe_t));
+    }
+    void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength-1));
+    if (p)    pipes = p;
+    pipesLength--;
 }
 int openPipe( char *name, int flags)  {
     int pipeId = getPipeFromName(name);

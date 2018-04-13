@@ -17,7 +17,7 @@ int currFd   = 3;
 
 bool fullStacks[STACKS];
 pipe_t **pipes;
-int pipesLength = 1;
+int pipesLength = 0;
 
 queue_t *queue;
 pcb_t *curr_prog;
@@ -65,28 +65,39 @@ uint32_t *getStackAddress(int id)  {
 }
 
 void allocateNewPipe( char *name, int mode)  {
-    void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
-    if (p)    pipes = p;
+    if(pipesLength != 0)  {
+        void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
+        if (p)    pipes = p;
+    }
+
+
+    pipes[ pipesLength] = (pipe_t *) malloc(sizeof(pipe_t));
     char *fname = (char *)malloc(sizeof(name));
     memcpy(fname, name, strlen(name)+1);
-    *(pipes[ pipesLength ]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
-    char *group = strtok( fname, "/" );
-    pipes[ pipesLength]->group = atoi(group);
+    *(pipes[ pipesLength]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
+    pipes[ pipesLength ]->group = atoi(strtok( fname, "/" ));
     pipesLength++;
 
 }
-int openPipe( char *name, int flags)  {
+int getPipeFromName(char *name)  {
     for (int i = 0; i < pipesLength; i++)  {
-        if (strcmp(name, pipes[ i ]->name) == 0)  {
-            if(checkPermissions(curr_prog->pid, pipes[ i ], flags ))  {
-                return i;
-            }
-
-        }
+        if(strcmp(name, pipes[ i ]->name) == 0)  return i;
     }
     return -1;
 }
-int getPipeId(int fd)  {
+void deallocatePipe(char *name)  {
+    if (pipesLength == 1)  {
+        free(pipes[0]);
+    }
+}
+int openPipe( char *name, int flags)  {
+    int pipeId = getPipeFromName(name);
+    if (pipeId != -1 && !checkPermissions(curr_prog->pid, pipes[ pipeId ], flags ))  {
+        pipeId = -1;
+    }
+    return pipeId;
+}
+int getPipeFromFd(int fd)  {
     for(int i = 0; i < pipesLength; i++)  {
         if(pipes[i]->fd == fd) return i;
     }
@@ -225,7 +236,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
               ctx->gpr[ 0 ] = n;
           } else {
               void*  x = ( void* )( ctx->gpr[ 1 ] );
-              int pipeId = getPipeId(fd);
+              int pipeId = getPipeFromFd(fd);
               ctx->gpr [ 0 ] = pipeId == -1 ?
                                          -1 :
                                          writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
@@ -239,14 +250,14 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
             if(fd > 2)  {
                 void *x = (void *) (ctx->gpr[ 1 ]);
-                int pipeId = getPipeId(fd);
+                int pipeId = getPipeFromFd(fd);
                 ctx->gpr [ 0 ] = pipeId == -1 ?
                                            -1 :
                                            readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
             }
             break;
         }
-        case 0x03: { //Fork
+        case 0x03 : { //Fork
             if ( memStackAvailable() )  {
                 pcb_t *child = create_process(curr_pid, &main_console);  // Create process with new pid, and give it the console fn to run. Stack = NULL
                 memcpy(&child->ctx, ctx, sizeof(ctx_t));                                                       // Copy context from console to new program.
@@ -264,13 +275,13 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
             break;
         }
-        case 0x04: { //Exit
+        case 0x04 : { //Exit
             curr_prog->status = STATUS_TERMINATED;
             put_str("\nProgram finished.\n\0");
             scheduler(ctx);
             break;
         }
-        case 0x05: { //Exec
+        case 0x05 : { //Exec
             void *main_fn = ( void * )( ctx->gpr[ 0 ]);                                // Get new main fn for program
             uint32_t *stack = (uint32_t *) (getStackAddress(curr_prog->stack_id));     // Get stack location (Top)
             ctx->sp = (uint32_t) stack;                                                // Set sp to start from top of stack
@@ -279,26 +290,16 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             memcpy(&curr_prog->ctx, ctx, sizeof(ctx_t));                               // Copy over ctx
             break;
         }
-        case 0x06: { //Kill
+        case 0x06 : { //Kill
             pid_t pid = ctx->gpr[ 0 ];
             ctx->gpr[ 0 ] = (int32_t) terminateProgram(pid);
             break;
         }
-        case 0x08: { //Mkfifo
+        case 0x08 : { //Mkfifo
             char *name = (char *) ctx->gpr[ 0 ];
             int mode   = (int   ) ctx->gpr[ 1 ];
             if(checkValidPipeName(name))  {
-                if( pipesLength != 1 )  allocateNewPipe(name, mode);
-                else {
-                    pipes[ pipesLength - 1] = (pipe_t *) malloc(sizeof(pipe_t));
-                    pipes[ pipesLength]->name = (char *)malloc(strlen(name)+1);
-                    char *fname = (char *)malloc(sizeof(name));
-                    memcpy(fname, name, strlen(name)+1);
-                    *(pipes[ pipesLength - 1]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
-                    char *group = strtok( fname, "/" );
-                    int groupNo = atoi(group);
-                    pipes[ pipesLength - 1]->group = groupNo;
-                }
+                allocateNewPipe(name, mode);
                 ctx->gpr[ 0 ] = 0;
             } else {
                 ctx->gpr[ 0 ] = -1;
@@ -306,7 +307,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
             break;
         }
-        case 0x0a: { //Open
+        case 0x0a : { //Open
             char *name = (char *) ctx->gpr[ 0 ];
             int   flags =   (int   ) ctx->gpr[ 1 ];
             int pipeId = openPipe(name, flags);

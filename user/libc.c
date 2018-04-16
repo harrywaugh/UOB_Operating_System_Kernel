@@ -173,3 +173,15 @@ int open (char *name, int flags)  {
                 : "r0", "r1" );
     return r;
 }
+
+int unlink( char *name )  {
+    int r;
+
+    asm volatile( "mov r0, %2 \n" // assign r0 =  name
+                  "svc %1     \n" // make system call SYS_UNLINK
+                  "mov %0, r0 \n" // assign r0 =    r
+                : "=r" (r)
+                : "I" (SYS_UNLINK), "r" (name)
+                : "r0", "r1" );
+    return r;
+}

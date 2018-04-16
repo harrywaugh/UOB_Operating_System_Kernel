@@ -1,16 +1,25 @@
 #include "philosopher.h"
-
+#include <stdlib.h>
 
 void main_philosopher() {
-    write( STDOUT_FILENO, "Philospher Started...\n", 22 );
-    int id;
-    int count = 0;
-    int r = mkfifo ("4/pipe", 0240);
-    int pipeFd = open ("4/pipe", O_WRONLY);
+    write( STDOUT_FILENO, "\nPhilospher 1 Started...\n", 25 );
 
-    write( STDOUT_FILENO, "Writing to pipe...", 18 );
-    write( pipeFd, "pipe data\n", 10);
+    //Create pipe and open
+    mkfifo ("4/pipe", 0240);
+    int writePipeFd = open ("4/pipe", O_WRONLY);
 
+    //Write to pipe
+    write( STDOUT_FILENO, "Philospher 1 Writing to pipe...\n", 32 );
+    write( writePipeFd, "\nphi1 data\n", 11);
+
+
+    char *readString = (char *)malloc((size_t)11);
+    int readPipeFd = -1;
+    while (readPipeFd == -1)  {
+        readPipeFd = open("3/pipe", O_RDONLY);
+        read(readPipeFd, readString, 11);
+        write(STDOUT_FILENO, readString, 11);
+    }
 
 
 

@@ -41,6 +41,7 @@ typedef int pid_t;
 #define SYS_MKFIFO    ( 0x08 )
 #define SYS_CLOSE     ( 0x09 )
 #define SYS_OPEN      ( 0x0a )
+#define SYS_UNLINK    ( 0x0b )
 
 #define SIG_TERM      ( 0x00 )
 #define SIG_QUIT      ( 0x01 )
@@ -85,5 +86,6 @@ extern int  mkfifo(char *name, int mode);
 //Open a pipe, returns the file descriptor, returns -1 on error.
 extern int  open(char *name, int flags);
 
+extern int unlink( char *name );
 
 #endif

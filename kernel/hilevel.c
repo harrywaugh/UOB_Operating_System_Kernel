@@ -96,6 +96,7 @@ int deallocatePipe(char *name)  {
     void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength-1));
     if (p)    pipes = p;
     pipesLength--;
+    return 0;
 }
 int openPipe( char *name, int flags)  {
     int pipeId = getPipeFromName(name);
@@ -311,7 +312,6 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             } else {
                 ctx->gpr[ 0 ] = -1;
             }
-
             break;
         }
         case 0x0a : { //Open
@@ -322,7 +322,11 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
                                       -1 :
                                       pipes[pipeId]->fd;
             break;
-
+        }
+        case 0x0b : {
+            char *name = (char *) ctx->gpr[ 0 ];
+            ctx->gpr[ 0 ] = deallocatePipe(name);
+            break;
         }
         default   : { // 0x?? => unknown/unsupported
           break;

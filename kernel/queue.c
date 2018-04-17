@@ -1,6 +1,5 @@
 #include "queue.h"
-#include "string.h"
-#include <stdio.h>
+
 
 queue_t *newQueue(int b)  {
     queue_t *nQueue = (queue_t *)malloc(sizeof(queue_t));
@@ -80,4 +79,13 @@ bool pop ( queue_t *queue, void *p )  {
 bool isEmpty( queue_t *queue )  {
     if ( queue->head == NULL)  return true;
     return false;
+}
+
+void freeQueue( queue_t *queue )  {
+    node_t *curr_node = queue->head;
+    while ( curr_node != NULL )  {
+        free(curr_node->item);
+        curr_node = curr_node->previous;
+    }
+    free(queue);
 }

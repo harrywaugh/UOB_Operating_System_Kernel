@@ -7,7 +7,7 @@
 
 #include "libc.h"
 
-int  atoi( char* x        ) {
+int  atoii( char* x        ) {
   char* p = x; bool s = false; int r = 0;
 
   if     ( *p == '-' ) {

@@ -65,37 +65,39 @@ uint32_t *getStackAddress(int id)  {
 }
 
 void allocateNewPipe( char *name, int mode)  {
-    if(pipesLength != 0)  {
+    if(pipesLength > 0)  {
         void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength+1));
         if (p)    pipes = p;
     }
-    pipes[ pipesLength] = (pipe_t *) malloc(sizeof(pipe_t));
+    pipes[ pipesLength ] = (pipe_t *) malloc(sizeof(pipe_t));
     char *fname = (char *)malloc(sizeof(name));
     memcpy(fname, name, strlen(name)+1);
     *(pipes[ pipesLength]) = (pipe_t){newQueue((size_t)1), name, currFd++, curr_prog->pid, NULL, mode};
     pipes[ pipesLength ]->group = atoi(strtok( fname, "/" ));
+    free(fname);
     pipesLength++;
 
 }
 int getPipeFromName(char *name)  {
+    int sameStr = 0;
     for (int i = 0; i < pipesLength; i++)  {
-        if(strcmp(name, pipes[ i ]->name) == 0)  return i;
+        sameStr = strcmp(name, pipes[ i ]->name);
+        if(sameStr == 0)  return i;
     }
     return -1;
 }
-int deallocatePipe(char *name)  {
-    int pipeId = getPipeFromName(name);
-    if (pipeId == -1)  return -1;
-    else if ( pipesLength == 1 + pipeId )  {
-        free(pipes[pipeId]);
-    }
-    else {
-        free(pipes[pipeId]);
+int deallocatePipe(int pipeId)  {
+    if (pipeId == -1 || pipeId > pipesLength)  return -1;
+    freeQueue(pipes[pipeId]->queue);
+    free(pipes[pipeId]);
+    if ( pipesLength != 1 + pipeId )  {
         memcpy(pipes[pipeId], pipes[pipesLength-1], sizeof(pipe_t));
     }
-    void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength-1));
-    if (p)    pipes = p;
     pipesLength--;
+    if(pipesLength > 0)  {
+        void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength));
+        if (p)    pipes = p;
+    }
     return 0;
 }
 int openPipe( char *name, int flags)  {
@@ -323,9 +325,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
                                       pipes[pipeId]->fd;
             break;
         }
-        case 0x0b : {
+        case 0x0b : { //Unlink
             char *name = (char *) ctx->gpr[ 0 ];
-            ctx->gpr[ 0 ] = deallocatePipe(name);
+            ctx->gpr[ 0 ] = deallocatePipe(getPipeFromName(name));
             break;
         }
         default   : { // 0x?? => unknown/unsupported

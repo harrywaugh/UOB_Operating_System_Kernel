@@ -113,8 +113,8 @@ void main_console() {
                 puts( "Execution attempt failed: No stack memory exception.\n", 54);
         }
         else if( 0 == strcmp( p, "terminate" ) ) {
-            pid_t pid = atoi( strtok( NULL, " " ) );
-            int   s   = atoi( strtok( NULL, " " ) );
+            pid_t pid = atoii( strtok( NULL, " " ) );
+            int   s   = atoii( strtok( NULL, " " ) );
 
             if ( (bool) kill( pid, s ) )  puts( "Program terminated.\n", 20 );
             else                          puts( "Program not terminated.\n"    , 24 );

@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include "string.h"
+#include <stdio.h>
+
 
 
 struct node_t {
@@ -22,3 +25,4 @@ void push ( queue_t *queue, void *p );
 void prioritypush ( queue_t *queue, void *p );
 void peek ( queue_t *queue, void *p );
 bool pop  ( queue_t *queue, void *p );
+void freeQueue( queue_t *queue);

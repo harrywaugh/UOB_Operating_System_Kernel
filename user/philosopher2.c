@@ -18,10 +18,10 @@ void main_philosopher2() {
     while (readPipeFd == -1)  {
         readPipeFd = open("4/pipe", O_RDONLY);
         read(readPipeFd, readString, 11);
-        write(STDOUT_FILENO, readString, 11);
     }
+    write(STDOUT_FILENO, readString, 11);
 
-
+    unlink("4/pipe");
 
     exit( EXIT_SUCCESS );
 }

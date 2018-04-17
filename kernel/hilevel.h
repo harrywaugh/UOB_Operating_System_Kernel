@@ -24,7 +24,7 @@
 // Include functionality relating to the   kernel.
 
 #include "lolevel.h"
-#include     "int.h"
+#include "int.h"
 #include "queue.h"
 
 

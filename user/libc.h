@@ -58,7 +58,7 @@ typedef int pid_t;
 #define O_RDWR   (6)
 
 // convert ASCII string x into integer r
-//extern int  atoi( char* x        );
+extern int  atoii( char* x        );
 // convert integer x into ASCII string r
 extern void itoa( char* r, int x );
 

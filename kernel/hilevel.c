@@ -90,6 +90,7 @@ void hilevel_handler_rst( ctx_t* ctx              ) {
        pcb->ctx.pc   = ( uint32_t )( p_mains[i]  );
        pcb->queue    = 0;
        prioritypush(queues[ 0 ], pcb);
+       free(pcb);
    }
     /* Once the PCBs are initialised, we (arbitrarily) select one to be
     * restored (i.e., executed) when the function then returns.

@@ -67,6 +67,7 @@ void pop ( queue_t *queue, pcb_t *pcb )  {
         memcpy(pcb, queue->head->pcb, sizeof(pcb_t));
         node_t *oldHeadNode = queue->head;
         queue->head = oldHeadNode->previous;
+        free(oldHeadNode->pcb); 
         free(oldHeadNode);
     }
 }

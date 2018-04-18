@@ -317,6 +317,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             ctx->gpr[ 0 ] = deallocatePipe(getPipeFromName(name));
             break;
         }
+        case 0x0c : {
+            ctx->gpr[ 0 ] = curr_prog->pid;
+        }
         default   : { // 0x?? => unknown/unsupported
           break;
         }

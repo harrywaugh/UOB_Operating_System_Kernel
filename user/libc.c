@@ -185,3 +185,15 @@ int unlink( char *name )  {
                 : "r0", "r1" );
     return r;
 }
+
+int getpid()  {
+    int r;
+
+    asm volatile( "svc %1     \n" // make system call SYS_FORK
+                "mov %0, r0 \n" // assign r  = r0
+              : "=r" (r)
+              : "I" (SYS_GETPID)
+              : "r0" );
+
+    return r;
+}

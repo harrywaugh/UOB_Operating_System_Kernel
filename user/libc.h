@@ -42,6 +42,7 @@ typedef int pid_t;
 #define SYS_CLOSE     ( 0x09 )
 #define SYS_OPEN      ( 0x0a )
 #define SYS_UNLINK    ( 0x0b )
+#define SYS_GETPID    ( 0x0c )
 
 #define SIG_TERM      ( 0x00 )
 #define SIG_QUIT      ( 0x01 )
@@ -87,5 +88,7 @@ extern int  mkfifo(char *name, int mode);
 extern int  open(char *name, int flags);
 
 extern int unlink( char *name );
+
+extern int getpid();
 
 #endif

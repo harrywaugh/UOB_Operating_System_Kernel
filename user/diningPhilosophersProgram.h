@@ -10,6 +10,5 @@
 #include "PL011.h"
 
 #include "libc.h"
-#include "console.h"
 
 #endif

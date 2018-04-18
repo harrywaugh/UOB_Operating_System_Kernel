@@ -119,15 +119,17 @@ bool checkValidPipeName(char *name)  {
     return true;
 }
 
-int writeBytesToQueue(queue_t *q, void *x, int n)  {
+int writeBytesToQueue(pipe_t *p, void *x, int n)  {
+    if(!checkPermissions(p, 2))  return -1;
     for(int i = 0; i < n; i++)  {
-        push(q, x++);
+        push(p->queue, x++);
     }
     return n;
 }
-int readBytesFromQueue(queue_t *q, void *x, int n)  {
+int readBytesFromQueue(pipe_t *p, void *x, int n)  {
+    if(!checkPermissions(p, 4))  return -1;
     for(int i = 0; i < n; i++)  {
-        if(!pop(q, x++))  return i;
+        if(!pop(p->queue, x++))  return i;
     }
     return n;
 }
@@ -234,7 +236,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
               int pipeId = getPipeFromFd(fd);
               ctx->gpr [ 0 ] = pipeId == -1 ?
                                          -1 :
-                                         writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
+                                         writeBytesToQueue(pipes[ pipeId ], x, n);
 
           }
           break;
@@ -248,7 +250,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
                 int pipeId = getPipeFromFd(fd);
                 ctx->gpr [ 0 ] = pipeId == -1 ?
                                            -1 :
-                                           readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
+                                           readBytesFromQueue(pipes[ pipeId ], x, n);
             }
             break;
         }

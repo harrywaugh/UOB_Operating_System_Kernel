@@ -35,15 +35,14 @@ bool terminateProgram(pid_t pid) {
     return false;
 }
 
-bool checkPermissions(int user, pipe_t *pipe, int flags)  {
+bool checkPermissions(pipe_t *pipe, int flags)  {
     int userCatergory = 0;
     if(curr_prog->pid == pipe->owner)  {
         userCatergory = 2;
     } else if(curr_prog->pid == pipe->group)  {
         userCatergory = 1;
     }
-    if(((pipe->mode >> 3*userCatergory) & flags) != 0) return true;
-    return false;
+    return ((pipe->mode >> 3*userCatergory) & flags) != 0;
 }
 
 int getFreeStack()  {
@@ -89,10 +88,10 @@ int getPipeFromName(char *name)  {
 int deallocatePipe(int pipeId)  {
     if (pipeId == -1 || pipeId > pipesLength)  return -1;
     freeQueue(pipes[pipeId]->queue);
-    free(pipes[pipeId]);
     if ( pipesLength != 1 + pipeId )  {
         memcpy(pipes[pipeId], pipes[pipesLength-1], sizeof(pipe_t));
     }
+    free(pipes[pipesLength-1]);
     pipesLength--;
     if(pipesLength > 0)  {
         void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength));
@@ -102,7 +101,7 @@ int deallocatePipe(int pipeId)  {
 }
 int openPipe( char *name, int flags)  {
     int pipeId = getPipeFromName(name);
-    if (pipeId != -1 && !checkPermissions(curr_prog->pid, pipes[ pipeId ], flags ))  {
+    if (pipeId != -1 && !checkPermissions(pipes[ pipeId ], flags ))  {
         pipeId = -1;
     }
     return pipeId;
@@ -155,12 +154,6 @@ int min (int a, int b)  {
     return (a < b) ? a : b;
 }
 
-// int activeQueue()  {
-//     int i = 0;
-//     while ( i < QUEUENO && isEmpty(queues[ i++ ]));
-//
-//     return i-1;
-// }
 
 void scheduler( ctx_t* ctx ) {
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
@@ -225,14 +218,6 @@ void hilevel_handler_irq( ctx_t* ctx) {
 }
 
 void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
-  /* Based on the identified encoded as an immediate operand in the
-   * instruction,
-   *
-   * - read  the arguments from preserved usr mode registers,
-   * - perform whatever is appropriate for this system call,
-   * - write any return value back to preserved usr mode registers.
-   */
-
       switch( id ) {
         case 0x01 : { // 0x01 => write( fd, x, n )
           int   fd = ( int   )( ctx->gpr[ 0 ] );

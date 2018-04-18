@@ -10,16 +10,16 @@ void main_philosopher2() {
 
     //Write to pipe
     write( STDOUT_FILENO, "Philospher 2 Writing to pipe...", 32 );
-    write( writePipeFd, "\nphi2 data\n", 11);
+    write( writePipeFd, "phi2 data", 9);
 
 
-    char *readString = (char *)malloc((size_t)11);
+    char *readString = (char *)malloc((size_t)9);
     int readPipeFd = -1;
     while (readPipeFd == -1)  {
         readPipeFd = open("4/pipe", O_RDONLY);
-        read(readPipeFd, readString, 11);
+        read(readPipeFd, readString, 9);
     }
-    write(STDOUT_FILENO, readString, 11);
+    write(STDOUT_FILENO, readString, 9);
 
     unlink("4/pipe");
 

@@ -15,9 +15,11 @@ void putStr( char* x, int n ) {
 void waiter() {
     pid_t philosophers[PHILOSOPHERS];
     int   philosopherFds[PHILOSOPHERS];
+    int   whoHasFork[PHILOSOPHERS];
 
     /////////////////////////////////////FORK children
     for (int i = 0; i < PHILOSOPHERS; i++)  {
+        whoHasFork[i] = -1;
         philosophers[ i ] = fork();
         if ( philosophers[ i ] == 0 )  {  //SUCCESS
             exec(&philosopher);
@@ -27,21 +29,48 @@ void waiter() {
     }
 
 
-    ///////////////////////////////////CREATE PIPES AND OPEN THEM
+    ///////////////////////////////////CREATE PIPES, OPEN THEM and get FDs
     char *pipeText = "/pipe";
+    char *pipeStr;
     for (int i = 0; i < PHILOSOPHERS; i++)  {
         char *pipeNo;
         itoa(pipeNo, philosophers[i] );
 
-        char *pipeStr = (char *)malloc(strlen(pipeText)+strlen(pipeNo)+1);
+        pipeStr = (char *)malloc(strlen(pipeText)+strlen(pipeNo)+1);
         memcpy(pipeStr, pipeNo, strlen(pipeNo));
         memcpy(pipeStr + strlen(pipeNo), pipeText, strlen(pipeText)+1);
 
         mkfifo (pipeStr, 0240);
         philosopherFds[i] = open (pipeStr, O_WRONLY);
-        int *sig;
-        *sig = 1;
-        write(philosopherFds[i], sig, sizeof(int));
+    }
+    /////////////////////////////CREATE PUBLIC PIPE
+    mkfifo("-1/waiterpipe", 0402 );
+    int waiterReadFd = open("-1/waiterpipe", O_RDONLY);
+
+
+    int *requestingPid = (int*)malloc(sizeof(int));
+    while (1)  {
+        *requestingPid = 0;
+        if(read(waiterReadFd, requestingPid, sizeof(int) ) > 0)  { //READ PID
+            int *sig;
+            *sig = 0;
+            if(read(waiterReadFd, sig, 1) > 0)  {
+                if(*sig == 1)  {  //REQUESTING PID WANTS TO PICK UP FORKS
+                    if(whoHasFork[(*requestingPid-3 + PHILOSOPHERS) % PHILOSOPHERS] == -1 &&
+                       whoHasFork[(*requestingPid-2 + PHILOSOPHERS) % PHILOSOPHERS] == -1)  {
+                        *sig = 1;  //YES
+                        whoHasFork[(*requestingPid-3 + PHILOSOPHERS) % PHILOSOPHERS] = *requestingPid;
+                        whoHasFork[(*requestingPid-2 + PHILOSOPHERS) % PHILOSOPHERS] = *requestingPid;
+                    } else {
+                        *sig = 0;  //NO
+                    }
+                    write(philosopherFds[(*requestingPid-3+PHILOSOPHERS)%PHILOSOPHERS], sig, 1);
+                } else if(*sig == 0)  {  //REQUESTING PID WANTS TO PUT DOWN FORKS
+                    whoHasFork[(*requestingPid-3 + PHILOSOPHERS) % PHILOSOPHERS] = -1;
+                    whoHasFork[(*requestingPid-2 + PHILOSOPHERS) % PHILOSOPHERS] = -1;
+                }
+            }
+        }
     }
 
     exit( EXIT_SUCCESS );

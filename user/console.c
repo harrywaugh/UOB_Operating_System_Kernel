@@ -39,7 +39,7 @@ extern void main_P2();
 extern void main_P3();
 extern void main_P4();
 extern void main_P5();
-extern void main_philosophers_program();
+extern void waiter();
 
 void* load( char* x ) {
     if     ( 0 == strcmp( x, "P1" ) ) {
@@ -58,7 +58,7 @@ void* load( char* x ) {
         return &main_P5;
     }
     else if( 0 == strcmp( x, "DP" ) ) {
-        return &main_philosophers_program;
+        return &waiter;
     }
 
     return NULL;

@@ -121,15 +121,17 @@ bool checkValidPipeName(char *name)  {
 
 int writeBytesToQueue(pipe_t *p, void *x, int n)  {
     if(!checkPermissions(p, 2))  return -1;
+    void *x2 = x;
     for(int i = 0; i < n; i++)  {
-        push(p->queue, x++);
+        push(p->queue, x2++);
     }
     return n;
 }
 int readBytesFromQueue(pipe_t *p, void *x, int n)  {
     if(!checkPermissions(p, 4))  return -1;
+    void *x2 = x;
     for(int i = 0; i < n; i++)  {
-        if(!pop(p->queue, x++))  return i;
+        if(!pop(p->queue, x2++))  return i;
     }
     return n;
 }
@@ -227,8 +229,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
           if( fd == 1)  {   //STDOUT_FILENO
               char*  x = ( char* )( ctx->gpr[ 1 ] );
+              char* x2 = x;
               for( int i = 0; i < n; i++ ) {
-                PL011_putc( UART0, *x++, true );
+                PL011_putc( UART0, *x2++, true );
               }
               ctx->gpr[ 0 ] = n;
           } else {

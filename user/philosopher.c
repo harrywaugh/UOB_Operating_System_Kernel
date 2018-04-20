@@ -6,7 +6,7 @@ void philosopher() {
 
     /////////////////Get PID and Print Init Message
     int pid = getpid();
-    char *pidStr;
+    char *pidStr = (char*)malloc(2*sizeof(char));
     itoa(pidStr, pid-3);
     write( STDOUT_FILENO, "\nStarted Philospher ", 20 );
     write( STDOUT_FILENO, pidStr, 2);
@@ -30,7 +30,7 @@ void philosopher() {
     }
 
 
-    itoa(pidStr, pid-3);
+    itoa(pidStr, pid - 3);
     int state = 0;
     int *sig = (int*)malloc(sizeof(int));
     while(1)  {
@@ -44,22 +44,22 @@ void philosopher() {
 
         if(state == 0)  {  //PHILOSOPHER THINKING -> Make eating request
             write( STDOUT_FILENO, "\nPhilosopher ", 13 );
+            //itoa(pidStr, pid-3);
             write( STDOUT_FILENO, pidStr, 2 );
             write( STDOUT_FILENO, " Thinking\n", 10 );
             write(writeWaiterFd, &pid, sizeof(int));
             *sig = 1;
-            write(writeWaiterFd, sig, 1);
+            write(writeWaiterFd, sig, (size_t)1);
             state = 2;
-
         } else if(state == 1) {           //PHILOSOPHER EATING  -> Put down fork
             write( STDOUT_FILENO, "\nPhilosopher ", 13 );
+            //itoa(pidStr, pid-3);
             write( STDOUT_FILENO, pidStr, 2 );
-            write( STDOUT_FILENO, "Eating\n", 7 );
+            write( STDOUT_FILENO, " Eating\n", 8 );
             write(writeWaiterFd, &pid, sizeof(int));
             *sig = 0;
-            write(writeWaiterFd, sig, 1);
+            write(writeWaiterFd, sig, (size_t)1);
             state = 0;
-
         }
 
     }

@@ -52,7 +52,7 @@ void waiter() {
     while (1)  {
         *requestingPid = 0;
         if(read(waiterReadFd, requestingPid, sizeof(int) ) > 0)  { //READ PID
-            int *sig;
+            int *sig = (int *)malloc(sizeof(int));
             *sig = 0;
             if(read(waiterReadFd, sig, 1) > 0)  {
                 if(*sig == 1)  {  //REQUESTING PID WANTS TO PICK UP FORKS
@@ -64,12 +64,13 @@ void waiter() {
                     } else {
                         *sig = 0;  //NO
                     }
-                    write(philosopherFds[(*requestingPid-3+PHILOSOPHERS)%PHILOSOPHERS], sig, 1);
+                    write(philosopherFds[(*requestingPid-2+PHILOSOPHERS)%PHILOSOPHERS], sig, 1);
                 } else if(*sig == 0)  {  //REQUESTING PID WANTS TO PUT DOWN FORKS
                     whoHasFork[(*requestingPid-3 + PHILOSOPHERS) % PHILOSOPHERS] = -1;
                     whoHasFork[(*requestingPid-2 + PHILOSOPHERS) % PHILOSOPHERS] = -1;
                 }
             }
+            free(sig);
         }
     }
 

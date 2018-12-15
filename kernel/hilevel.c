@@ -35,15 +35,14 @@ bool terminateProgram(pid_t pid) {
     return false;
 }
 
-bool checkPermissions(int user, pipe_t *pipe, int flags)  {
+bool checkPermissions(pipe_t *pipe, int flags)  {
     int userCatergory = 0;
     if(curr_prog->pid == pipe->owner)  {
         userCatergory = 2;
     } else if(curr_prog->pid == pipe->group)  {
         userCatergory = 1;
     }
-    if(((pipe->mode >> 3*userCatergory) & flags) != 0) return true;
-    return false;
+    return ((pipe->mode >> 3*userCatergory) & flags) != 0;
 }
 
 int getFreeStack()  {
@@ -89,10 +88,10 @@ int getPipeFromName(char *name)  {
 int deallocatePipe(int pipeId)  {
     if (pipeId == -1 || pipeId > pipesLength)  return -1;
     freeQueue(pipes[pipeId]->queue);
-    free(pipes[pipeId]);
     if ( pipesLength != 1 + pipeId )  {
         memcpy(pipes[pipeId], pipes[pipesLength-1], sizeof(pipe_t));
     }
+    free(pipes[pipesLength-1]);
     pipesLength--;
     if(pipesLength > 0)  {
         void *p = realloc(pipes, sizeof(pipe_t *) * (pipesLength));
@@ -102,7 +101,7 @@ int deallocatePipe(int pipeId)  {
 }
 int openPipe( char *name, int flags)  {
     int pipeId = getPipeFromName(name);
-    if (pipeId != -1 && !checkPermissions(curr_prog->pid, pipes[ pipeId ], flags ))  {
+    if (pipeId != -1 && !checkPermissions(pipes[ pipeId ], flags ))  {
         pipeId = -1;
     }
     return pipeId;
@@ -120,15 +119,19 @@ bool checkValidPipeName(char *name)  {
     return true;
 }
 
-int writeBytesToQueue(queue_t *q, void *x, int n)  {
+int writeBytesToQueue(pipe_t *p, void *x, int n)  {
+    if(!checkPermissions(p, 2))  return -1;
+    void *x2 = x;
     for(int i = 0; i < n; i++)  {
-        push(q, x++);
+        push(p->queue, x2++);
     }
     return n;
 }
-int readBytesFromQueue(queue_t *q, void *x, int n)  {
+int readBytesFromQueue(pipe_t *p, void *x, int n)  {
+    if(!checkPermissions(p, 4))  return -1;
+    void *x2 = x;
     for(int i = 0; i < n; i++)  {
-        if(!pop(q, x++))  return i;
+        if(!pop(p->queue, x2++))  return i;
     }
     return n;
 }
@@ -155,12 +158,6 @@ int min (int a, int b)  {
     return (a < b) ? a : b;
 }
 
-// int activeQueue()  {
-//     int i = 0;
-//     while ( i < QUEUENO && isEmpty(queues[ i++ ]));
-//
-//     return i-1;
-// }
 
 void scheduler( ctx_t* ctx ) {
     memcpy( &curr_prog->ctx, ctx, sizeof( ctx_t ) );
@@ -225,14 +222,6 @@ void hilevel_handler_irq( ctx_t* ctx) {
 }
 
 void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
-  /* Based on the identified encoded as an immediate operand in the
-   * instruction,
-   *
-   * - read  the arguments from preserved usr mode registers,
-   * - perform whatever is appropriate for this system call,
-   * - write any return value back to preserved usr mode registers.
-   */
-
       switch( id ) {
         case 0x01 : { // 0x01 => write( fd, x, n )
           int   fd = ( int   )( ctx->gpr[ 0 ] );
@@ -240,8 +229,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
 
           if( fd == 1)  {   //STDOUT_FILENO
               char*  x = ( char* )( ctx->gpr[ 1 ] );
+              char* x2 = x;
               for( int i = 0; i < n; i++ ) {
-                PL011_putc( UART0, *x++, true );
+                PL011_putc( UART0, *x2++, true );
               }
               ctx->gpr[ 0 ] = n;
           } else {
@@ -249,7 +239,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
               int pipeId = getPipeFromFd(fd);
               ctx->gpr [ 0 ] = pipeId == -1 ?
                                          -1 :
-                                         writeBytesToQueue(pipes[ pipeId ]->queue, x, n);
+                                         writeBytesToQueue(pipes[ pipeId ], x, n);
 
           }
           break;
@@ -263,7 +253,7 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
                 int pipeId = getPipeFromFd(fd);
                 ctx->gpr [ 0 ] = pipeId == -1 ?
                                            -1 :
-                                           readBytesFromQueue(pipes[ pipeId ]->queue, x, n);
+                                           readBytesFromQueue(pipes[ pipeId ], x, n);
             }
             break;
         }
@@ -329,6 +319,9 @@ void hilevel_handler_svc( ctx_t* ctx, uint32_t id ) {
             char *name = (char *) ctx->gpr[ 0 ];
             ctx->gpr[ 0 ] = deallocatePipe(getPipeFromName(name));
             break;
+        }
+        case 0x0c : {
+            ctx->gpr[ 0 ] = curr_prog->pid;
         }
         default   : { // 0x?? => unknown/unsupported
           break;
